@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 
 # 从环境变量中读取 API 密钥
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key-here")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "b5afc8c2-957d-4de1-9881-fe464e2a2d0b")
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
