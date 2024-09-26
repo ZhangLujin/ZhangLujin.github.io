@@ -263,11 +263,22 @@
   // 添加按钮点击事件以实现发送消息功能
   document.getElementById('sendTextBtn').addEventListener('click', sendMessage);
 
-  // 添加回车键发送消息功能
-  document.getElementById('user-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // 防止默认的换行行为
-      sendMessage();
+  // 修改键盘事件处理
+  document.getElementById('user-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      if (e.ctrlKey) {
+        // Ctrl + Enter: 插入换行
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
+        let value = this.value;
+        this.value = value.slice(0, start) + "\n" + value.slice(end);
+        this.selectionStart = this.selectionEnd = start + 1;
+        e.preventDefault();
+      } else {
+        // 只有 Enter: 发送消息
+        e.preventDefault();
+        sendMessage();
+      }
     }
   });
 
@@ -299,6 +310,7 @@
             });
   }
 </script>
+
 
 </body>
 </html>
