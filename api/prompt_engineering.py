@@ -9,7 +9,7 @@ def load_config():
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def build_system_prompt(mode="writing"):
+def build_system_prompt():
     config = load_config()
     return {"role": "system", "content": config['system_prompt']}
 
@@ -20,6 +20,10 @@ def guided_essay_flow(user_input, state):
     step_config = next((step for step in config['flow'] if step['step'] == current_step), None)
     if not step_config:
         return "对不起，我无法继续指导。", state
+
+    if not user_input and current_step == 'start_guidance':
+        # 如果是初始状态，直接返回第一个 prompt
+        return step_config['prompt'], state
 
     prompt = [
         build_system_prompt(),
