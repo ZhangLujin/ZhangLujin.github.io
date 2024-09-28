@@ -14,7 +14,7 @@ class PromptEngineer:
         ]
 
     @staticmethod
-    def process_chat(ai_service, user_input):
+    def chat_flow(ai_service, user_input):
         try:
             # 调用 OpenAI 模型进行判断语气
             attitude_check = ai_service.create_chat_completion(
@@ -32,7 +32,6 @@ class PromptEngineer:
                 response = {"response": completion.choices[0].message.content}
             else:
                 response = {"response": "请注意您的用词，保持文明对话。"}
-
             return response
         except Exception as e:
             return {"error": str(e)}
