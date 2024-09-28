@@ -1,30 +1,27 @@
 # /api/chat.py
 
-from http.server import BaseHTTPRequestHandler
-from .prompt_engineering import guided_essay
-import json
+from flask import Flask, request, jsonify
+from .prompt_engineering import guided_essay  # 使用相对导入方式，导入新的 guided_essay 函数
 
-def handler(request, response):
-    if request.method == 'POST':
-        try:
-            # 解析请求体
-            body = json.loads(request.body)
+app = Flask(__name__)
 
-            # 调用 guided_essay 函数
-            essay_response, status_code = guided_essay()
+@app.route('/api/chat', methods=['POST'])
+def chat_route():
+    try:
+        # 获取请求数据
+        data = request.json
+        user_input = data.get('message')
+        state = data.get('state', {})
 
-            # 设置响应
-            response.status_code = status_code
-            response.headers['Content-Type'] = 'application/json'
-            return response.json(essay_response)
+        # 调用 guided_essay 函数
+        response, new_state = guided_essay(user_input, state)
 
-        except json.JSONDecodeError:
-            response.status_code = 400
-            return response.json({"error": "Invalid JSON"})
+        # 返回响应
+        return jsonify({"response": response, "state": new_state}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        except Exception as e:
-            response.status_code = 500
-            return response.json({"error": str(e)})
-    else:
-        response.status_code = 405
-        return response.json({"error": "Method not allowed"})
+# Vercel 需要一个 handler 函数作为入口点
+def handler(request):
+    with app.request_context(request):
+        return app.dispatch_request()
