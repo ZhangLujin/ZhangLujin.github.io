@@ -6,23 +6,41 @@ from .ai_service import call_openai_api
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'chat_flow_config.json')
 
 def load_config():
-    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        print(f"Loaded config: {json.dumps(config, indent=2)}")  # 打印加载的配置
+        return config
+    except Exception as e:
+        print(f"Error loading config: {str(e)}")
+        return None
 
 def build_system_prompt(mode="writing"):
     config = load_config()
-    return {"role": "system", "content": config['system_prompt']}
+    if config and 'system_prompt' in config:
+        return {"role": "system", "content": config['system_prompt']}
+    else:
+        print("Error: system_prompt not found in config")
+        return {"role": "system", "content": "You are a helpful assistant."}
 
 def guided_essay_flow(user_input, state):
     config = load_config()
+    if not config:
+        return "配置加载失败，请检查配置文件。", state
+
     current_step = state.get('current_step', 'start_guidance')
+    print(f"Current step: {current_step}")  # 打印当前步骤
 
     step_config = next((step for step in config['flow'] if step['step'] == current_step), None)
     if not step_config:
-        return "对不起，我无法继续指导。", state
+        print(f"Step '{current_step}' not found in config")  # 打印未找到步骤的信息
+        # 如果找不到当前步骤，尝试回到第一个步骤
+        step_config = config['flow'][0]
+        current_step = step_config['step']
+        print(f"Falling back to first step: {current_step}")
 
     if not user_input and current_step == 'start_guidance':
-        return step_config['prompt'], state
+        return step_config['prompt'], {'current_step': current_step}
 
     prompt = [
         build_system_prompt(),
@@ -54,5 +72,5 @@ def chat():
         return jsonify({"response": response, "state": new_state}), 200
 
     except Exception as e:
-        print(f"Error in chat function: {str(e)}")  # 添加服务器端日志
+        print(f"Error in chat function: {str(e)}")
         return jsonify({"error": str(e), "response": "抱歉，出现了一个错误。请重试或联系支持。"}), 500
