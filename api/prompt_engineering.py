@@ -1,7 +1,7 @@
-# prompt_engineering.py
+# /api/prompt_engineering.py
 
 from flask import request, jsonify
-from ai_service.py import get_attitude_result, get_ai_response
+from .ai_service import get_attitude_result, get_ai_response  # 注意，使用相对导入方式
 
 def chat():
     # 确保只允许 POST 请求

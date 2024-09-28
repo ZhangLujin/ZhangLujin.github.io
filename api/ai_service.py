@@ -1,4 +1,4 @@
-# ai_service.py
+# /api/ai_service.py
 
 import os
 from openai import OpenAI
