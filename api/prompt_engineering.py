@@ -5,7 +5,7 @@ from .ai_service import call_openai_api
 
 def build_system_prompt(mode="writing"):
     if mode == "writing":
-        return {"role": "system", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程。"}
+        return {"role": "system", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程。仔细评估学生的回答，只有在回答满足要求时才继续下一步。"}
     elif mode == "qa":
         return {"role": "system", "content": "你是一位友善的答疑老师，刚刚指导学生完成了一篇'我的心爱之物'主题的作文。现在你要回答学生关于这篇作文的任何问题，帮助他们更好地理解写作技巧和改进方法。"}
 
@@ -26,32 +26,49 @@ def guided_essay_flow(user_input, state):
 
     if current_step < len(steps):
         result, new_state = steps[current_step](user_input, state)
-        return result["response"], new_state
+        if new_state['current_step'] == current_step:
+            # AI不满意，需要学生继续完善
+            return result, new_state
+        else:
+            # AI满意，进入下一步
+            next_step = steps[new_state['current_step']]
+            initial_prompt, next_state = next_step("", new_state)
+            return initial_prompt, next_state
     else:
-        result, new_state = qa_mode(user_input, state)
-        return result["response"], new_state
+        return qa_mode(user_input, state)
 
 def start_guidance(user_input, state):
+    if not user_input:
+        return "你好！我们今天要写一篇'我的心爱之物'的作文。让我们开始吧！首先，请告诉我，你最心爱的东西是什么？", state
+
     prompt = [
         build_system_prompt(),
-        {"role": "assistant", "content": "你好！我们今天要写一篇'我的心爱之物'的作文。让我们开始吧！首先，请告诉我，你最心爱的东西是什么？"}
+        {"role": "assistant", "content": "你好！我们今天要写一篇'我的心爱之物'的作文。让我们开始吧！首先，请告诉我，你最心爱的东西是什么？"},
+        {"role": "user", "content": user_input},
+        {"role": "assistant", "content": "请评估学生的回答是否充分说明了他们最心爱的东西。如果回答满意，请继续下一步；如果不满意，请给出建议并要求学生重新回答。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 1
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 1
+        new_state['topic'] = user_input
+    return response, new_state
 
 def determine_topic(user_input, state):
+    if not user_input:
+        return "太好了！你能告诉我为什么这个东西是你的心爱之物吗？它对你有什么特别的意义？", state
+
     prompt = [
         build_system_prompt(),
-        {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "太好了！你能告诉我为什么这个东西是你的心爱之物吗？它对你有什么特别的意义？"}
+        {"role": "user", "content": f"我最心爱的东西是{state['topic']}。" + user_input},
+        {"role": "assistant", "content": "请评估学生的回答是否充分说明了为什么这个东西是他们的心爱之物，以及它的特别意义。如果回答满意，请继续下一步；如果不满意，请给出建议并要求学生重新回答。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 2
-    new_state['topic'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 2
+        new_state['topic_reason'] = user_input
+    return response, new_state
 
 def create_mind_map(user_input, state):
     prompt = [
@@ -163,7 +180,12 @@ def chat():
         user_input = body.get('message', '')
         state = body.get('state', {'current_step': 0})
 
-        response, new_state = guided_essay_flow(user_input, state)
+        if not user_input and state['current_step'] == 0:
+            # 首次加载，直接返回初始引导语
+            response, new_state = start_guidance("", state)
+        else:
+            response, new_state = guided_essay_flow(user_input, state)
+
         return jsonify({"response": response, "state": new_state}), 200
 
     except Exception as e:

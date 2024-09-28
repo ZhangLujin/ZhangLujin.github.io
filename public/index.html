@@ -249,6 +249,84 @@
   gsap.from("footer", { opacity: 0, y: 20, duration: 0.6, delay: 0.6, ease: "power3.out" });
 
   let currentState = { current_step: 0 };
+  const userInput = document.getElementById('user-input');
+  const sendTextBtn = document.getElementById('sendTextBtn');
+  const chatBox = document.getElementById('chat-box');
+  const restartBtn = document.getElementById('restartBtn');
+
+  function disableUserInput() {
+    userInput.disabled = true;
+    sendTextBtn.disabled = true;
+  }
+
+  function enableUserInput() {
+    userInput.disabled = false;
+    sendTextBtn.disabled = false;
+  }
+
+  function sendMessage(message = '') {
+    if (!message) {
+      message = userInput.value;
+    }
+    if (!message.trim() && currentState.current_step !== 0) return;
+
+    disableUserInput();
+
+    if (message.trim()) {
+      chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
+    }
+    userInput.value = '';
+
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ message: message, state: currentState })
+    })
+            .then(response => response.json())
+            .then(data => {
+              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+              chatBox.scrollTop = chatBox.scrollHeight;
+
+              currentState = data.state;
+              updateUI(currentState.current_step);
+
+              if (currentState.current_step === data.state.current_step) {
+                enableUserInput();
+              } else {
+                // AI 自动进入下一步，继续发送空消息以获取下一步的引导
+                sendMessage('');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> 发生了一个错误，请稍后重试。</div>`;
+              enableUserInput();
+            });
+  }
+
+  function updateUI(step) {
+    const structureItems = document.querySelectorAll('.structure-item');
+    const steps = ['主题', '开头', '主体', '结尾', '标题'];
+    structureItems.forEach((item, index) => {
+      if (index < Math.min(step, steps.length)) {
+        item.style.backgroundColor = '#d1fae5'; // 完成的步骤
+      } else if (index === Math.min(step, steps.length)) {
+        item.style.backgroundColor = '#fef3c7'; // 当前步骤
+      } else {
+        item.style.backgroundColor = 'white'; // 未完成的步骤
+      }
+    });
+
+    if (step >= steps.length) {
+      document.querySelector('h1').textContent = 'AI 作文答疑系统';
+      userInput.placeholder = '在这里输入你的问题...';
+    } else {
+      document.querySelector('h1').textContent = 'AI 作文引导系统';
+      userInput.placeholder = '在这里输入你的回答...';
+    }
+  }
 
   // 页面加载完成后自动开始引导
   window.addEventListener('load', function() {
@@ -256,17 +334,19 @@
   });
 
   // 添加按钮点击事件以实现发送消息功能
-  document.getElementById('sendTextBtn').addEventListener('click', sendMessage);
+  sendTextBtn.addEventListener('click', function() {
+    sendMessage();
+  });
 
   // 添加重新开始按钮事件
-  document.getElementById('restartBtn').addEventListener('click', function() {
+  restartBtn.addEventListener('click', function() {
     currentState = { current_step: 0 };
-    document.getElementById('chat-box').innerHTML = '';
+    chatBox.innerHTML = '';
     sendMessage('');
   });
 
   // 修改键盘事件处理
-  document.getElementById('user-input').addEventListener('keydown', function(e) {
+  userInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       if (e.ctrlKey) {
         // Ctrl + Enter: 插入换行
@@ -284,62 +364,11 @@
     }
   });
 
-  function sendMessage(userInput = '') {
-    if (!userInput) {
-      userInput = document.getElementById('user-input').value;
-    }
-    if (!userInput.trim() && currentState.current_step !== 0) return;
-
-    // 在前端显示用户消息（如果有）
-    const chatBox = document.getElementById('chat-box');
-    if (userInput.trim()) {
-      chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${userInput}</div>`;
-    }
-    document.getElementById('user-input').value = '';
-
-    // 发送请求到后端
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ message: userInput, state: currentState })
-    })
-            .then(response => response.json())
-            .then(data => {
-              // 在前端显示AI的回复
-              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-              chatBox.scrollTop = chatBox.scrollHeight; // 自动滚动到底部
-
-              // 更新状态
-              currentState = data.state;
-
-              // 更新UI以反映当前写作阶段
-              updateUI(currentState.current_step);
-            })
-            .catch(error => {
-              console.error('Error:', error);
-            });
-  }
-
-  function updateUI(step) {
-    const structureItems = document.querySelectorAll('.structure-item');
-    structureItems.forEach((item, index) => {
-      if (index < step) {
-        item.style.backgroundColor = '#d1fae5'; // 完成的步骤
-      } else if (index === step) {
-        item.style.backgroundColor = '#fef3c7'; // 当前步骤
-      } else {
-        item.style.backgroundColor = 'white'; // 未完成的步骤
-      }
-    });
-
-    // 如果进入答疑模式，更新UI
-    if (step >= 9) {
-      document.querySelector('h1').textContent = 'AI 作文答疑系统';
-      document.getElementById('user-input').placeholder = '在这里输入你的问题...';
-    }
-  }
+  // 语音输入按钮事件（如果需要实现）
+  document.getElementById('voiceInputBtn').addEventListener('click', function() {
+    // 在这里添加语音输入的逻辑
+    alert('语音输入功能尚未实现');
+  });
 </script>
 
 </body>
