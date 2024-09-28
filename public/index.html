@@ -311,9 +311,9 @@
     const structureItems = document.querySelectorAll('.structure-item');
     const steps = ['主题', '开头', '主体', '结尾', '标题'];
     structureItems.forEach((item, index) => {
-      if (index < Math.min(step, steps.length)) {
+      if (index < step) {
         item.style.backgroundColor = '#d1fae5'; // 完成的步骤
-      } else if (index === Math.min(step, steps.length)) {
+      } else if (index === step) {
         item.style.backgroundColor = '#fef3c7'; // 当前步骤
       } else {
         item.style.backgroundColor = 'white'; // 未完成的步骤

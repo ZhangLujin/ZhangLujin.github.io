@@ -9,7 +9,7 @@ def load_config():
     try:
         with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        print(f"Loaded config: {json.dumps(config, indent=2)}")  # 打印加载的配置
+        print(f"Loaded config: {json.dumps(config, indent=2)}")
         return config
     except Exception as e:
         print(f"Error loading config: {str(e)}")
@@ -29,18 +29,17 @@ def guided_essay_flow(user_input, state):
         return "配置加载失败，请检查配置文件。", state
 
     current_step = state.get('current_step', 'start_guidance')
-    print(f"Current step: {current_step}")  # 打印当前步骤
+    print(f"Current step: {current_step}")
 
     step_config = next((step for step in config['flow'] if step['step'] == current_step), None)
     if not step_config:
-        print(f"Step '{current_step}' not found in config")  # 打印未找到步骤的信息
-        # 如果找不到当前步骤，尝试回到第一个步骤
+        print(f"Step '{current_step}' not found in config")
         step_config = config['flow'][0]
         current_step = step_config['step']
         print(f"Falling back to first step: {current_step}")
 
     if not user_input and current_step == 'start_guidance':
-        return step_config['prompt'], {'current_step': current_step}
+        return step_config['prompt'], {'current_step': 0}
 
     prompt = [
         build_system_prompt(),
@@ -55,7 +54,9 @@ def guided_essay_flow(user_input, state):
     if "继续下一步" in response:
         current_index = config['flow'].index(step_config)
         if current_index + 1 < len(config['flow']):
-            new_state['current_step'] = config['flow'][current_index + 1]['step']
+            new_state['current_step'] = current_index + 1
+        else:
+            new_state['current_step'] = len(config['flow'])  # 最后一步
 
     return response, new_state
 
@@ -66,7 +67,7 @@ def chat():
     try:
         body = request.json
         user_input = body.get('message', '')
-        state = body.get('state', {'current_step': 'start_guidance'})
+        state = body.get('state', {'current_step': 0})
 
         response, new_state = guided_essay_flow(user_input, state)
         return jsonify({"response": response, "state": new_state}), 200
