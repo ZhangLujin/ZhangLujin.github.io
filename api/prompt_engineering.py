@@ -1,37 +1,42 @@
-class PromptEngineer:
-    @staticmethod
-    def get_attitude_check_prompt(user_input):
-        return [
+# prompt_engineering.py
+
+from flask import request, jsonify
+from ai_service.py import get_attitude_result, get_ai_response
+
+def chat():
+    # 确保只允许 POST 请求
+    if request.method != 'POST':
+        return jsonify({"error": "Only POST method is allowed"}), 405
+
+    # 尝试解析请求体
+    try:
+        body = request.json
+        user_input = body.get('message')
+        if not user_input:
+            return jsonify({"error": "Message is required"}), 400
+    except Exception as e:
+        return jsonify({"error": "Invalid request format"}), 400
+
+    try:
+        # 构建用于判断语气的提示词
+        attitude_messages = [
             {"role": "system", "content": "你是一个判断助手，帮助判断用户语言是否友好。"},
             {"role": "user", "content": f"用户语句：{user_input}。请判断该语句是否是友好的，如果是，回答'友好'，如果不是，回答'不友好'。"}
         ]
+        attitude_result = get_attitude_result(attitude_messages)
 
-    @staticmethod
-    def get_chatbot_prompt(user_input):
-        return [
-            {"role": "system", "content": "你是豆包，是由字节跳动开发的 AI 人工智能助手"},
-            {"role": "user", "content": user_input}
-        ]
+        # 根据用户的语气判断，生成不同的回复
+        if attitude_result == "友好":
+            # 构建用于生成友好回复的提示词
+            response_messages = [
+                {"role": "system", "content": "你是豆包，是由字节跳动开发的 AI 人工智能助手"},
+                {"role": "user", "content": user_input}
+            ]
+            ai_reply = get_ai_response(response_messages)
+            response = {"response": ai_reply}
+        else:
+            response = {"response": "请注意您的用词，保持文明对话。"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    @staticmethod
-    def chat_flow(ai_service, user_input):
-        try:
-            # 调用 OpenAI 模型进行判断语气
-            attitude_check = ai_service.create_chat_completion(
-                model="ep-20240924191053-2c9zd",
-                messages=PromptEngineer.get_attitude_check_prompt(user_input)
-            )
-            attitude_result = attitude_check.choices[0].message.content.strip()
-
-            # 根据用户的语气判断，生成不同的回复
-            if attitude_result == "友好":
-                completion = ai_service.create_chat_completion(
-                    model="ep-20240924191053-2c9zd",
-                    messages=PromptEngineer.get_chatbot_prompt(user_input)
-                )
-                response = {"response": completion.choices[0].message.content}
-            else:
-                response = {"response": "请注意您的用词，保持文明对话。"}
-            return response
-        except Exception as e:
-            return {"error": str(e)}
+    return jsonify(response), 200
