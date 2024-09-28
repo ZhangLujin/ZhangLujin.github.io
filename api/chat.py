@@ -23,12 +23,8 @@ def chat():
     except Exception as e:
         return jsonify({"error": "Invalid request format"}), 400
 
-    response = PromptEngineer.process_chat(ai_service, user_input)
-
-    if "error" in response:
-        return jsonify(response), 500
-    else:
+    try:
+        response = PromptEngineer.process_chat(ai_service, user_input)
         return jsonify(response), 200
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
