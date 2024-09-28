@@ -14,19 +14,19 @@ class PromptEngineer:
         ]
 
     @staticmethod
-    def process_chat(client, user_input):
+    def process_chat(ai_service, user_input):
         try:
             # 调用 OpenAI 模型进行判断语气
-            attitude_check = client.chat.completions.create(
-                model="ep-20240924191053-2c9zd",  # 你的模型 ID
+            attitude_check = ai_service.create_chat_completion(
+                model="ep-20240924191053-2c9zd",
                 messages=PromptEngineer.get_attitude_check_prompt(user_input)
             )
             attitude_result = attitude_check.choices[0].message.content.strip()
 
             # 根据用户的语气判断，生成不同的回复
             if attitude_result == "友好":
-                completion = client.chat.completions.create(
-                    model="ep-20240924191053-2c9zd",  # 你的 AI 模型 ID
+                completion = ai_service.create_chat_completion(
+                    model="ep-20240924191053-2c9zd",
                     messages=PromptEngineer.get_chatbot_prompt(user_input)
                 )
                 response = {"response": completion.choices[0].message.content}

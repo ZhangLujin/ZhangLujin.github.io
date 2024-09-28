@@ -1,16 +1,9 @@
 from flask import Flask, request, jsonify
-import os
-from openai import OpenAI
+from ai_service import AIService
 from prompt_engineering import PromptEngineer
 
-# 从环境变量中读取 API 密钥
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "b5afc8c2-957d-4de1-9881-fe464e2a2d0b")
-
-# 初始化 OpenAI 客户端
-client = OpenAI(
-    api_key=OPENAI_API_KEY,
-    base_url="https://ark.cn-beijing.volces.com/api/v3"
-)
+# 创建 AIService 实例
+ai_service = AIService()
 
 # 创建 Flask 应用实例
 app = Flask(__name__)
@@ -30,7 +23,7 @@ def chat():
     except Exception as e:
         return jsonify({"error": "Invalid request format"}), 400
 
-    response = PromptEngineer.process_chat(client, user_input)
+    response = PromptEngineer.process_chat(ai_service, user_input)
 
     if "error" in response:
         return jsonify(response), 500
