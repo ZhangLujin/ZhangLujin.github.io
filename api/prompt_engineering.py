@@ -25,15 +25,11 @@ def guided_essay_flow(user_input, state):
     ]
 
     if current_step < len(steps):
-        result, new_state = steps[current_step](user_input, state)
-        if new_state['current_step'] == current_step:
-            # AI不满意，需要学生继续完善
-            return result, new_state
-        else:
-            # AI满意，进入下一步
-            next_step = steps[new_state['current_step']]
-            initial_prompt, next_state = next_step("", new_state)
-            return initial_prompt, next_state
+        response, new_state = steps[current_step](user_input, state)
+        # 确保 response 是字符串
+        if isinstance(response, dict) and 'response' in response:
+            response = response['response']
+        return response, new_state
     else:
         return qa_mode(user_input, state)
 
@@ -73,65 +69,70 @@ def create_mind_map(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "你的想法很有趣！让我们来做一个思维导图，帮助你组织思路。请回答以下问题：\n1. 你的心爱之物长什么样子？\n2. 你是怎么得到它的？\n3. 它让你感觉如何？\n4. 有什么特别的回忆和它有关吗？\n请尽可能详细地回答这些问题。"}
+        {"role": "assistant", "content": "请根据学生的回答创建一个思维导图。如果信息不足，请继续引导学生提供更多细节。如果信息充足，总结主要点并继续下一步。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 3
-    new_state['mind_map'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 3
+        new_state['mind_map'] = user_input
+    return response, new_state
 
 def guide_introduction(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "你的想法很丰富！现在让我们开始写作文的开头。开头可以用以下方式之一：\n1. 直接介绍你的心爱之物\n2. 描述第一次看到它的场景\n3. 用一个有趣的问题引出主题\n选择一种方式，写出你的开头段落吧。"}
+        {"role": "assistant", "content": "请评估学生的开头段落。如果开头吸引人且与主题相关，继续下一步。否则，提供具体建议并要求学生修改。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 4
-    new_state['introduction'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 4
+        new_state['introduction'] = user_input
+    return response, new_state
 
 def guide_body(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "好的开头！接下来我们来写作文的主体部分。请描述2-3个关于你心爱之物的事件或特点。每个部分可以包括：\n1. 具体的描述\n2. 相关的细节\n3. 你的感受或想法\n4. 这个事件或特点的影响\n请开始写作主体部分，写完一个部分就告诉我，我们一起来完善。"}
+        {"role": "assistant", "content": "请评估学生的主体段落。确保内容丰富、结构清晰、细节充实。如果满意，继续下一步；否则，提供改进建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 5
-    new_state['body'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 5
+        new_state['body'] = user_input
+    return response, new_state
 
 def guide_conclusion(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "主体部分写得很精彩！现在让我们来写结尾。在结尾中，你可以：\n1. 总结这个心爱之物对你的意义\n2. 表达你对它的感情\n3. 说说它给你的生活带来了什么变化\n请写出你的结尾段落。"}
+        {"role": "assistant", "content": "请评估学生的结尾段落。确保结尾总结了主要观点并给出了深刻的感悟。如果满意，继续下一步；否则，提供修改建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 6
-    new_state['conclusion'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 6
+        new_state['conclusion'] = user_input
+    return response, new_state
 
 def create_title(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "太棒了，你的作文主体已经完成！现在让我们为你的作文起一个吸引人的标题。好的标题应该简明、具体、新颖。想一想，什么标题能最好地概括你的心爱之物和你对它的感情？请提供2-3个标题的想法。"}
+        {"role": "assistant", "content": "请评估学生提供的标题。确保标题简洁、吸引人且反映文章主题。如果满意，继续下一步；否则，提供改进建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
-    new_state['current_step'] = 7
-    new_state['title_ideas'] = user_input
-    return {"response": response}, new_state
+    if "继续下一步" in response:
+        new_state['current_step'] = 7
+        new_state['title'] = user_input
+    return response, new_state
 
 def review_essay(user_input, state):
     full_essay = f"""
-    题目：{user_input}
+    题目：{state.get('title', '未命名')}
     
     开头：{state.get('introduction', '')}
     
@@ -142,13 +143,13 @@ def review_essay(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": f"这是我完成的作文：\n\n{full_essay}"},
-        {"role": "assistant", "content": "恭喜你完成了作文！我来给你一些反馈。我会从以下几个方面评价你的作文：\n1. 内容的真实性和丰富程度\n2. 语言的准确性和生动性\n3. 结构的完整性和逻辑性\n4. 情感的真挚度\n5. 整体的创新性\n我会给出具体的评价和改进建议，以及一个总体的五星评分。"}
+        {"role": "assistant", "content": "请全面评估这篇作文，给出具体的评价和改进建议。评估后，引导学生进入答疑环节。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
     new_state['current_step'] = 8
     new_state['final_essay'] = full_essay
-    return {"response": response}, new_state
+    return response, new_state
 
 def start_qa_mode(user_input, state):
     prompt = [
@@ -159,7 +160,7 @@ def start_qa_mode(user_input, state):
     new_state = state.copy()
     new_state['current_step'] = 9
     new_state['mode'] = "qa"
-    return {"response": response}, new_state
+    return response, new_state
 
 def qa_mode(user_input, state):
     prompt = [
@@ -168,7 +169,7 @@ def qa_mode(user_input, state):
         {"role": "assistant", "content": "我会根据你的问题，结合你刚刚完成的作文，给出详细的解答和建议。"}
     ]
     response = call_openai_api(prompt)
-    return {"response": response}, state
+    return response, state
 
 def chat():
     if request.method != 'POST':
@@ -179,13 +180,9 @@ def chat():
         user_input = body.get('message', '')
         state = body.get('state', {'current_step': 0})
 
-        if not user_input and state['current_step'] == 0:
-            # 首次加载，直接返回初始引导语
-            response, new_state = start_guidance("", state)
-        else:
-            response, new_state = guided_essay_flow(user_input, state)
-
+        response, new_state = guided_essay_flow(user_input, state)
         return jsonify({"response": response, "state": new_state}), 200
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error in chat function: {str(e)}")  # 添加服务器端日志
+        return jsonify({"error": str(e), "response": "抱歉，出现了一个错误。请重试或联系支持。"}), 500
