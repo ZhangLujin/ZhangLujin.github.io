@@ -12,27 +12,13 @@ client = OpenAI(
     base_url="https://ark.cn-beijing.volces.com/api/v3"
 )
 
-def get_attitude_result(messages, model="ep-20240924191053-2c9zd"):
+def call_openai_api(messages, model="ep-20240924191053-2c9zd"):
     """
-    调用 OpenAI 模型判断用户语气是否友好。
+    调用 OpenAI 模型并返回结果。
 
-    :param messages: 提示消息列表
+    :param messages: 构建好的消息列表
     :param model: 使用的模型 ID
-    :return: 判断结果 ('友好' 或 '不友好')
-    """
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages
-    )
-    return response.choices[0].message.content.strip()
-
-def get_ai_response(messages, model="ep-20240924191053-2c9zd"):
-    """
-    调用 OpenAI 模型生成 AI 回复。
-
-    :param messages: 提示消息列表
-    :param model: 使用的模型 ID
-    :return: AI 生成的回复内容
+    :return: 模型生成的回复内容
     """
     response = client.chat.completions.create(
         model=model,
