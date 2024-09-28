@@ -286,18 +286,15 @@
     })
             .then(response => response.json())
             .then(data => {
-              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-              chatBox.scrollTop = chatBox.scrollHeight;
+              if (data.response) {
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
 
               currentState = data.state;
               updateUI(currentState.current_step);
 
-              if (currentState.current_step === data.state.current_step) {
-                enableUserInput();
-              } else {
-                // AI 自动进入下一步，继续发送空消息以获取下一步的引导
-                sendMessage('');
-              }
+              enableUserInput();
             })
             .catch(error => {
               console.error('Error:', error);

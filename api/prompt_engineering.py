@@ -55,19 +55,18 @@ def start_guidance(user_input, state):
     return response, new_state
 
 def determine_topic(user_input, state):
-    if not user_input:
-        return "太好了！你能告诉我为什么这个东西是你的心爱之物吗？它对你有什么特别的意义？", state
-
     prompt = [
         build_system_prompt(),
-        {"role": "user", "content": f"我最心爱的东西是{state['topic']}。" + user_input},
-        {"role": "assistant", "content": "请评估学生的回答是否充分说明了为什么这个东西是他们的心爱之物，以及它的特别意义。如果回答满意，请继续下一步；如果不满意，请给出建议并要求学生重新回答。"}
+        {"role": "user", "content": f"我最心爱的东西是{state.get('topic', '未指定')}。{user_input}"},
+        {"role": "assistant", "content": "请评估学生的回答。如果回答不够详细或不够具体，继续引导学生提供更多信息。如果回答已经足够详细，请继续下一步。无论如何，都要给出回应。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
     if "继续下一步" in response:
         new_state['current_step'] = 2
         new_state['topic_reason'] = user_input
+    else:
+        new_state['current_step'] = 1  # 保持在当前步骤
     return response, new_state
 
 def create_mind_map(user_input, state):
