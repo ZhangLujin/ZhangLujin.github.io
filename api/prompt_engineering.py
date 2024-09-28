@@ -41,7 +41,7 @@ def start_guidance(user_input, state):
         build_system_prompt(),
         {"role": "assistant", "content": "你好！我们今天要写一篇'我的心爱之物'的作文。让我们开始吧！首先，请告诉我，你最心爱的东西是什么？"},
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请评估学生的回答是否充分说明了他们最心爱的东西。如果回答满意，请继续下一步；如果不满意，请给出建议并要求学生重新回答。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生的回答是否充分说明了他们最心爱的东西。如果回答满意，请继续下一步；如果不满意，请给出建议并要求学生重新回答。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -54,7 +54,7 @@ def determine_topic(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": f"我最心爱的东西是{state.get('topic', '未指定')}。{user_input}"},
-        {"role": "assistant", "content": "请评估学生的回答。如果回答不够详细或不够具体，继续引导学生提供更多信息。如果回答已经足够详细，请继续下一步。无论如何，都要给出回应。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生的回答。如果回答不够详细或不够具体，继续引导学生提供更多信息。如果回答已经足够详细，请继续下一步。无论如何，都要给出回应。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -69,7 +69,7 @@ def create_mind_map(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请根据学生的回答创建一个思维导图。如果信息不足，请继续引导学生提供更多细节。如果信息充足，总结主要点并继续下一步。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请根据学生的回答创建一个思维导图。如果信息不足，请继续引导学生提供更多细节。如果信息充足，总结主要点并继续下一步。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -82,7 +82,7 @@ def guide_introduction(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请评估学生的开头段落。如果开头吸引人且与主题相关，继续下一步。否则，提供具体建议并要求学生修改。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生的开头段落。如果开头吸引人且与主题相关，继续下一步。否则，提供具体建议并要求学生修改。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -95,7 +95,7 @@ def guide_body(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请评估学生的主体段落。确保内容丰富、结构清晰、细节充实。如果满意，继续下一步；否则，提供改进建议。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生的主体段落。确保内容丰富、结构清晰、细节充实。如果满意，继续下一步；否则，提供改进建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -108,7 +108,7 @@ def guide_conclusion(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请评估学生的结尾段落。确保结尾总结了主要观点并给出了深刻的感悟。如果满意，继续下一步；否则，提供修改建议。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生的结尾段落。确保结尾总结了主要观点并给出了深刻的感悟。如果满意，继续下一步；否则，提供修改建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -121,7 +121,7 @@ def create_title(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": "请评估学生提供的标题。确保标题简洁、吸引人且反映文章主题。如果满意，继续下一步；否则，提供改进建议。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请评估学生提供的标题。确保标题简洁、吸引人且反映文章主题。如果满意，继续下一步；否则，提供改进建议。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
@@ -143,7 +143,7 @@ def review_essay(user_input, state):
     prompt = [
         build_system_prompt(),
         {"role": "user", "content": f"这是我完成的作文：\n\n{full_essay}"},
-        {"role": "assistant", "content": "请全面评估这篇作文，给出具体的评价和改进建议。评估后，引导学生进入答疑环节。"}
+        {"role": "assistant", "content": "你是一位经验丰富的小学作文教师，正在指导学生完成一篇'我的心爱之物'主题的作文。用友好、鼓励的语气主动引导学生完成写作过程,注意对学生的要求不要太高，稍微满意即可。请全面评估这篇作文，给出具体的评价和改进建议。评估后，引导学生进入答疑环节。"}
     ]
     response = call_openai_api(prompt)
     new_state = state.copy()
