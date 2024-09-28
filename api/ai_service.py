@@ -9,9 +9,8 @@ class AIService:
             base_url="https://ark.cn-beijing.volces.com/api/v3"
         )
 
-    def get_completion(self, messages, model="ep-20240924191053-2c9zd"):
-        response = self.client.chat.completions.create(
+    def create_chat_completion(self, model, messages):
+        return self.client.chat.completions.create(
             model=model,
             messages=messages
         )
-        return response.choices[0].message.content
