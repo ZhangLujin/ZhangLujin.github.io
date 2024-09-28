@@ -25,9 +25,11 @@ def guided_essay_flow(user_input, state):
     ]
 
     if current_step < len(steps):
-        return steps[current_step](user_input, state)
+        result, new_state = steps[current_step](user_input, state)
+        return result["response"], new_state
     else:
-        return qa_mode(user_input, state)
+        result, new_state = qa_mode(user_input, state)
+        return result["response"], new_state
 
 def start_guidance(user_input, state):
     prompt = [
