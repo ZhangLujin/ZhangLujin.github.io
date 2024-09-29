@@ -17,10 +17,10 @@ def load_config():
 
 def build_system_prompt(mode="writing"):
     config = load_config()
-    if config and 'system_prompt' in config:
-        return {"role": "system", "content": config['system_prompt']}
+    if config and 'global_system_prompt' in config:
+        return {"role": "system", "content": config['global_system_prompt']}
     else:
-        print("Error: system_prompt not found in config")
+        print("Error: global_system_prompt not found in config")
         return {"role": "system", "content": "You are a helpful assistant."}
 
 def guided_essay_flow(user_input, state):
@@ -39,13 +39,13 @@ def guided_essay_flow(user_input, state):
         print(f"Falling back to first step: {current_step}")
 
     if not user_input and current_step == 'start_guidance':
-        return step_config['prompt'], {'current_step': 0}
+        return step_config['display_text'], {'current_step': 0}
 
     prompt = [
         build_system_prompt(),
-        {"role": "assistant", "content": step_config['prompt']},
+        {"role": "assistant", "content": step_config['display_text']},
         {"role": "user", "content": user_input},
-        {"role": "assistant", "content": step_config['evaluation']}
+        {"role": "system", "content": step_config['system_prompt']}
     ]
 
     response = call_openai_api(prompt)

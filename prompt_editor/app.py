@@ -50,23 +50,23 @@ class PromptEditor(QMainWindow):
         right_layout.addWidget(QLabel("Step Name:"))
         right_layout.addWidget(self.step_name)
 
-        self.prompt = QTextEdit()
-        right_layout.addWidget(QLabel("Prompt:"))
-        right_layout.addWidget(self.prompt)
+        self.display_text = QTextEdit()
+        right_layout.addWidget(QLabel("Display Text:"))
+        right_layout.addWidget(self.display_text)
 
-        self.evaluation = QTextEdit()
-        right_layout.addWidget(QLabel("Evaluation:"))
-        right_layout.addWidget(self.evaluation)
+        self.system_prompt = QTextEdit()
+        right_layout.addWidget(QLabel("System Prompt:"))
+        right_layout.addWidget(self.system_prompt)
 
         self.save_btn = QPushButton("Save Changes")
         right_layout.addWidget(self.save_btn)
 
         right_panel.setWidget(right_content)
 
-        # System Prompt Editor
-        self.system_prompt = QTextEdit()
-        left_layout.addWidget(QLabel("System Prompt:"))
-        left_layout.addWidget(self.system_prompt)
+        # Global System Prompt Editor
+        self.global_system_prompt = QTextEdit()
+        left_layout.addWidget(QLabel("Global System Prompt:"))
+        left_layout.addWidget(self.global_system_prompt)
 
         # Add panels to main layout
         main_layout.addWidget(left_panel, 1)
@@ -84,7 +84,7 @@ class PromptEditor(QMainWindow):
         with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
         self.update_flow_list()
-        self.system_prompt.setPlainText(self.config.get('system_prompt', ''))
+        self.global_system_prompt.setPlainText(self.config.get('global_system_prompt', ''))
 
     def update_flow_list(self):
         self.flow_list.clear()
@@ -96,16 +96,16 @@ class PromptEditor(QMainWindow):
             return
         step = next(s for s in self.config['flow'] if s['step'] == current.text())
         self.step_name.setText(step['step'])
-        self.prompt.setPlainText(step['prompt'])
-        self.evaluation.setPlainText(step['evaluation'])
+        self.display_text.setPlainText(step['display_text'])
+        self.system_prompt.setPlainText(step['system_prompt'])
 
     def add_step(self):
         step_name, ok = QInputDialog.getText(self, "Add Step", "Enter step name:")
         if ok and step_name:
             new_step = {
                 "step": step_name,
-                "prompt": "",
-                "evaluation": ""
+                "display_text": "",
+                "system_prompt": ""
             }
             self.config['flow'].append(new_step)
             self.update_flow_list()
@@ -136,10 +136,10 @@ class PromptEditor(QMainWindow):
         if current_item:
             step = next(s for s in self.config['flow'] if s['step'] == current_item.text())
             step['step'] = self.step_name.text()
-            step['prompt'] = self.prompt.toPlainText()
-            step['evaluation'] = self.evaluation.toPlainText()
+            step['display_text'] = self.display_text.toPlainText()
+            step['system_prompt'] = self.system_prompt.toPlainText()
 
-        self.config['system_prompt'] = self.system_prompt.toPlainText()
+        self.config['global_system_prompt'] = self.global_system_prompt.toPlainText()
 
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=2, ensure_ascii=False)
