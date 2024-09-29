@@ -63,11 +63,6 @@ class PromptEditor(QMainWindow):
 
         right_panel.setWidget(right_content)
 
-        # Global System Prompt Editor
-        self.global_system_prompt = QTextEdit()
-        left_layout.addWidget(QLabel("Global System Prompt:"))
-        left_layout.addWidget(self.global_system_prompt)
-
         # Add panels to main layout
         main_layout.addWidget(left_panel, 1)
         main_layout.addWidget(right_panel, 2)
@@ -84,7 +79,6 @@ class PromptEditor(QMainWindow):
         with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
             self.config = json.load(f)
         self.update_flow_list()
-        self.global_system_prompt.setPlainText(self.config.get('global_system_prompt', ''))
 
     def update_flow_list(self):
         self.flow_list.clear()
@@ -138,8 +132,6 @@ class PromptEditor(QMainWindow):
             step['step'] = self.step_name.text()
             step['display_text'] = self.display_text.toPlainText()
             step['system_prompt'] = self.system_prompt.toPlainText()
-
-        self.config['global_system_prompt'] = self.global_system_prompt.toPlainText()
 
         with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=2, ensure_ascii=False)
