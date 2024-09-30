@@ -52,7 +52,8 @@ def guided_essay_flow(user_input, state):
                 'current_step': new_step,
                 'conversation': conversation
             }
-            return config['flow'][new_step]['display_text'], new_state
+            # 返回新阶段的提示文本和状态，模拟首次进入
+            return config['flow'][new_state['current_step']]['display_text'], new_state
         else:
             return "无效的阶段跳转请求。", state
 

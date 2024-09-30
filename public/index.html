@@ -207,6 +207,7 @@
       <div class="flex justify-between mt-2">
         <button class="btn btn-accent" id="voiceInputBtn">语音输入</button>
         <button class="btn btn-primary" id="sendTextBtn">发送</button>
+        <button class="btn btn-primary" id="forceNextBtn">跳到下一步</button>
       </div>
     </div>
   </div>
@@ -262,18 +263,21 @@
   const restartBtn = document.getElementById('restartBtn');
   const stageSelect = document.getElementById('stage-select');
   const jumpStageBtn = document.getElementById('jumpStageBtn');
+  const forceNextBtn = document.getElementById('forceNextBtn');
 
   function disableUserInput() {
     userInput.disabled = true;
     sendTextBtn.disabled = true;
+    forceNextBtn.disabled = true;
   }
 
   function enableUserInput() {
     userInput.disabled = false;
     sendTextBtn.disabled = false;
+    forceNextBtn.disabled = false;
   }
 
-  function sendMessage(message = '') {
+  function sendMessage(message = '', forceNext = false) {
     if (!message) {
       message = userInput.value;
     }
@@ -286,12 +290,17 @@
     }
     userInput.value = '';
 
+    const requestBody = { message: message, state: currentState };
+    if (forceNext) {
+      requestBody.force_next_step = true;
+    }
+
     fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ message: message, state: currentState })
+      body: JSON.stringify(requestBody)
     })
             .then(response => response.json())
             .then(data => {
@@ -385,14 +394,20 @@
               .then(response => response.json())
               .then(data => {
                 currentState = data.state;
-                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> 跳转到阶段 ${selectedStep}</div>`;
+                chatBox.innerHTML = '';  // 清除聊天框，模拟首次进入该阶段
                 updateUI(currentState.current_step);
+                sendMessage('');  // 重新加载该阶段的 display_text
               })
               .catch(error => {
                 console.error('Error:', error);
                 chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '跳转阶段时发生了一个错误。'}</div>`;
               });
     }
+  });
+
+  // 处理强制进入下一阶段
+  forceNextBtn.addEventListener('click', function() {
+    sendMessage('', true);
   });
 
   // 修改键盘事件处理
