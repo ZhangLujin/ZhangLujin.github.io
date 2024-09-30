@@ -369,7 +369,8 @@
   nextStageBtn.addEventListener('click', function() {
     const userInputValue = userInput.value.trim();
 
-    if (currentState.conversation.length > 0 || userInputValue) {
+    // 检查当前对话记录中是否有用户输入过的内容或者当前有输入框的内容
+    if (currentState.conversation.some(msg => msg.role === 'user') || userInputValue) {
       const presetUserMessage = userInputValue || "我觉得我的答案已经足够了，我们可以继续下一步吗？";
       chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
       sendMessage(presetUserMessage, true);
@@ -377,6 +378,7 @@
       alert('请先在当前阶段作答，然后再跳转到下一步。');
     }
   });
+
 
   restartBtn.addEventListener('click', function() {
     currentState = { current_step: 0, conversation: [], max_completed_step: 0 };  // 重置 max_completed_step

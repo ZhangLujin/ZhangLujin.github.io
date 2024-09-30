@@ -24,7 +24,7 @@ def guided_essay_flow(user_input, state):
         return "配置加载失败，请检查配置文件。", state, []
 
     current_step = state.get('current_step', 0)
-    max_completed_step = state.get('max_completed_step', 0)  # 新增，记录用户到达的最高步骤
+    max_completed_step = state.get('max_completed_step', 0)  # 记录用户到达的最高步骤
     conversation = state.get('conversation', [])
 
     if current_step >= len(config['flow']):
@@ -72,7 +72,7 @@ def guided_essay_flow(user_input, state):
     }
 
     # 当 AI 回复中包含“继续下一步”或者用户输入有效并强制跳到下一步时
-    if "继续下一步" in response or ('force_next_step' in state and conversation):
+    if "继续下一步" in response or ('force_next_step' in state and len(conversation) > 1):  # 确保有输入内容
         # 更新到下一步，并更新用户已完成的最高步骤
         new_state['current_step'] = current_step + 1
         new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
@@ -82,7 +82,7 @@ def guided_essay_flow(user_input, state):
             return "写作流程已完成。", new_state, config['flow']
 
     # 如果用户输入无效但试图跳过，返回错误信息
-    if 'force_next_step' in state and not conversation:
+    if 'force_next_step' in state and len(conversation) <= 1:
         return "请在当前阶段提供有效的输入，才能跳到下一步。", new_state, config['flow']
 
     return response, new_state, config['flow']
