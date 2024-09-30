@@ -37,10 +37,12 @@ def guided_essay_flow(user_input, state):
     if user_input:
         conversation.append({"role": "user", "content": user_input})
 
-    # 跳转到特定步骤，只能跳到用户到过的最大步骤
+    # 跳转到特定步骤，更新max_completed_step
     if 'jump_to_step' in state:
         new_step = state['jump_to_step']
         if new_step >= 0 and new_step <= max_completed_step:
+            # 更新最高完成步骤
+            max_completed_step = max(max_completed_step, new_step)
             new_state = {
                 'current_step': new_step,
                 'conversation': conversation,
@@ -75,7 +77,7 @@ def guided_essay_flow(user_input, state):
     if "继续下一步" in response or 'force_next_step' in state:
         # 更新到下一步，并更新用户已完成的最高步骤
         new_state['current_step'] = current_step + 1
-        new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
+        new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])  # 确保max_completed_step更新
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
         else:
