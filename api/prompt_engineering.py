@@ -41,10 +41,8 @@ def guided_essay_flow(user_input, state):
 
     # 获取对话记录，默认为空列表
     conversation = state.get('conversation', [])
-    # 将用户输入添加到对话记录中
-    conversation.append({"role": "user", "content": user_input})
 
-    # 检查用户是否要求跳转到特定阶段
+    # 处理跳转逻辑，如果用户请求跳转到某个阶段
     if 'jump_to_step' in state:
         new_step = state['jump_to_step']
         if new_step >= 0 and new_step < len(config['flow']):
@@ -52,8 +50,8 @@ def guided_essay_flow(user_input, state):
                 'current_step': new_step,
                 'conversation': conversation
             }
-            # 返回新阶段的提示文本和状态，模拟首次进入
-            return config['flow'][new_state['current_step']]['display_text'], new_state
+            step_config = config['flow'][new_step]
+            return step_config['display_text'], new_state
         else:
             return "无效的阶段跳转请求。", state
 
@@ -80,6 +78,9 @@ def guided_essay_flow(user_input, state):
 
     # 如果 AI 回复中包含"继续下一步"或用户手动要求跳到下一步，更新步骤并返回下一步的提示文本
     if "继续下一步" in response or 'force_next_step' in state:
+        # 检查用户是否已经作答，才能允许强制进入下一步
+        if user_input.strip() == "":
+            return "请先回答当前问题，然后再跳到下一阶段。", new_state
         new_state['current_step'] = current_step + 1
         # 如果没有超过流程的最大步骤数，返回下一步的提示文本
         if new_state['current_step'] < len(config['flow']):
