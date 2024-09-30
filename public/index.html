@@ -367,20 +367,10 @@
   });
 
   nextStageBtn.addEventListener('click', function() {
-    const userInputValue = userInput.value.trim(); // 获取当前输入框的值
-
-    // 检查当前输入框是否有新的有效内容，或者之前的对话记录中已经有用户输入
-    const hasUserInput = currentState.conversation.some(msg => msg.role === 'user');
-
-    // 如果当前输入框中有内容，或者之前已有用户输入，则允许跳到下一步
-    if (userInputValue) {
-      const presetUserMessage = userInputValue || "我觉得我的答案已经足够了，我们可以继续下一步吗？";
-      chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
-      sendMessage(presetUserMessage, true);
-    } else if (!hasUserInput) {
-      // 如果对话记录中没有用户输入，并且当前输入框为空，则禁止跳到下一步
-      alert('请先在当前阶段作答，然后再跳转到下一步。');
-    }
+    // 用户不再需要输入内容，直接允许跳到下一步
+    const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
+    chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
+    sendMessage(presetUserMessage, true);
   });
 
 

@@ -33,9 +33,9 @@ def guided_essay_flow(user_input, state):
 
     step_config = config['flow'][current_step]
 
-    # 如果用户有输入，将用户输入添加到对话记录中
-    if user_input and user_input.strip():
-        conversation.append({"role": "user", "content": user_input.strip()})
+    # 将用户输入添加到对话记录中
+    if user_input:
+        conversation.append({"role": "user", "content": user_input})
 
     # 跳转到特定步骤，只能跳到用户到过的最大步骤
     if 'jump_to_step' in state:
@@ -71,19 +71,15 @@ def guided_essay_flow(user_input, state):
         'max_completed_step': max_completed_step
     }
 
-    # 当 AI 回复中包含“继续下一步”或者用户输入有效并强制跳到下一步时
-    if "继续下一步" in response or ('force_next_step' in state and any(msg['role'] == 'user' for msg in conversation)):
-        # 检查是否有用户输入，才允许跳到下一步
+    # 当 AI 回复中包含“继续下一步”或者用户请求强制跳到下一步时，不再检查输入内容
+    if "继续下一步" in response or 'force_next_step' in state:
+        # 更新到下一步，并更新用户已完成的最高步骤
         new_state['current_step'] = current_step + 1
         new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
         else:
             return "写作流程已完成。", new_state, config['flow']
-
-    # 如果用户输入无效但试图跳过，返回错误信息
-    if 'force_next_step' in state and not any(msg['role'] == 'user' for msg in conversation):
-        return "请在当前阶段提供有效的输入，才能跳到下一步。", new_state, config['flow']
 
     return response, new_state, config['flow']
 
@@ -94,7 +90,7 @@ def chat():
 
     try:
         body = request.json
-        user_input = body.get('message', '').strip()  # 确保用户输入已去除空白字符
+        user_input = body.get('message', '')
         state = body.get('state', {'current_step': 0, 'conversation': [], 'max_completed_step': 0})
 
         # 检查是否需要跳到特定阶段
