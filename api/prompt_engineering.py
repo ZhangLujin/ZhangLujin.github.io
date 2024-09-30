@@ -36,17 +36,19 @@ def guided_essay_flow(user_input, state):
     if user_input:
         conversation.append({"role": "user", "content": user_input})
 
-    # 跳转到特定步骤
+    # 跳转到特定步骤，但只能跳转到已经到过的阶段
     if 'jump_to_step' in state:
         new_step = state['jump_to_step']
-        if new_step >= 0 and new_step < len(config['flow']):
+        if new_step <= current_step:
+            # 仅允许跳转到已到达的步骤
             new_state = {
                 'current_step': new_step,
                 'conversation': conversation
             }
             return config['flow'][new_step]['display_text'], new_state, config['flow']
         else:
-            return "无效的阶段跳转请求。", state, config['flow']
+            # 无效跳转请求
+            return "无效的阶段跳转请求。您只能跳转到已经完成的步骤。", state, config['flow']
 
     # 第一步时无需用户输入直接展示
     if not user_input and current_step == 0:
@@ -68,8 +70,8 @@ def guided_essay_flow(user_input, state):
         'conversation': conversation
     }
 
-    # 如果 AI 回复中包含“继续下一步”，或用户强制要求跳到下一步
-    if "继续下一步" in response or 'force_next_step' in state:
+    # 去掉原本对用户输入有效性的判断，直接跳到下一步
+    if 'force_next_step' in state:
         new_state['current_step'] = current_step + 1
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
