@@ -19,12 +19,14 @@ def load_config():
 def guided_essay_flow(user_input, state):
     config = load_config()
     if not config:
-        return "配置加载失败，请检查配置文件。", state
+        # 如果加载配置失败，返回错误信息、状态和空结构
+        return "配置加载失败，请检查配置文件。", state, []
 
     current_step = state.get('current_step', 0)
 
     if current_step >= len(config['flow']):
-        return "写作流程已完成。", state
+        # 如果流程完成，返回完成信息、状态和步骤结构
+        return "写作流程已完成。", state, config['flow']
 
     step_config = config['flow'][current_step]
     conversation = state.get('conversation', [])
@@ -37,12 +39,12 @@ def guided_essay_flow(user_input, state):
                 'current_step': new_step,
                 'conversation': conversation
             }
-            return config['flow'][new_step]['display_text'], new_state
+            return config['flow'][new_step]['display_text'], new_state, config['flow']
         else:
-            return "无效的阶段跳转请求。", state
+            return "无效的阶段跳转请求。", state, config['flow']
 
     if not user_input and current_step == 0:
-        return step_config['display_text'], {'current_step': 0, 'conversation': conversation}
+        return step_config['display_text'], {'current_step': 0, 'conversation': conversation}, config['flow']
 
     prompt = [
         {"role": "system", "content": step_config['system_prompt']},
@@ -81,6 +83,7 @@ def chat():
         if force_next_step:
             state['force_next_step'] = True
 
+        # 始终解包三个值，确保不会出现 unpack 错误
         response, new_state, structure = guided_essay_flow(user_input, state)
 
         return jsonify({"response": response, "state": new_state, "structure": structure}), 200
