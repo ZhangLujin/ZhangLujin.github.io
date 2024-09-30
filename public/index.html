@@ -369,8 +369,11 @@
   nextStageBtn.addEventListener('click', function() {
     const userInputValue = userInput.value.trim();
 
-    // 检查当前对话记录中是否有用户输入过的内容或者当前有输入框的内容
-    if (currentState.conversation.some(msg => msg.role === 'user') || userInputValue) {
+    // 检查对话记录中是否有任何用户的输入内容
+    const hasUserInput = currentState.conversation.some(msg => msg.role === 'user');
+
+    // 如果对话记录中已有用户输入，或者输入框中有内容，允许跳到下一步
+    if (hasUserInput || userInputValue) {
       const presetUserMessage = userInputValue || "我觉得我的答案已经足够了，我们可以继续下一步吗？";
       chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
       sendMessage(presetUserMessage, true);
