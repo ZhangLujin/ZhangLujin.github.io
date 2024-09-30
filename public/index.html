@@ -368,32 +368,18 @@
   });
 
   nextStageBtn.addEventListener('click', function() {
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ state: currentState, force_next_step: true })  // 发送跳转请求
-    })
-            .then(response => response.json())
-            .then(data => {
-              if (data.error) {
-                throw new Error(data.error);
-              }
-              if (data.response.includes('请先在当前阶段作答')) {
-                alert(data.response);  // 提示用户先作答
-              } else {
-                // 正常跳转到下一步
-                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                currentState = data.state;
-                updateUI(currentState.current_step);
-              }
-            })
-            .catch(error => {
-              console.error('Error:', error);
-              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
-            });
+    // 检查是否有用户输入过内容
+    const userHasAnswered = currentState.conversation.some(
+            message => message.role === 'user' && message.content.trim() !== ''
+    );
+
+    if (userHasAnswered) {
+      sendMessage('', true); // 允许跳转到下一步
+    } else {
+      alert('请先在当前阶段作答，然后再跳转到下一步。'); // 提示用户先作答
+    }
   });
+
 
   restartBtn.addEventListener('click', function() {
     currentState = { current_step: 0, conversation: [] };
