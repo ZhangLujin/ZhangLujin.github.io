@@ -72,18 +72,17 @@ def guided_essay_flow(user_input, state):
     }
 
     # 当 AI 回复中包含“继续下一步”或者用户输入有效并强制跳到下一步时
-    if "继续下一步" in response or ('force_next_step' in state and user_input):
-        # 更新到下一步，并更新用户已完成的最高步骤
-        new_state['current_step'] = current_step + 1
-        new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
-        if new_state['current_step'] < len(config['flow']):
-            return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
+    if "继续下一步" in response or 'force_next_step' in state:
+        if user_input:  # 确保用户在当前阶段提供了有效的输入
+            # 更新到下一步，并更新用户已完成的最高步骤
+            new_state['current_step'] = current_step + 1
+            new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
+            if new_state['current_step'] < len(config['flow']):
+                return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
+            else:
+                return "写作流程已完成。", new_state, config['flow']
         else:
-            return "写作流程已完成。", new_state, config['flow']
-
-    # 如果用户输入无效但试图跳过，返回错误信息
-    if 'force_next_step' in state and not user_input:
-        return "请在当前阶段提供有效的输入，才能跳到下一步。", new_state, config['flow']
+            return "请在当前阶段提供有效的输入，才能跳到下一步。", new_state, config['flow']
 
     return response, new_state, config['flow']
 
