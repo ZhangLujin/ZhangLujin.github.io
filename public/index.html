@@ -291,7 +291,187 @@
 </footer>
 
 <script>
-  // ... (保持原有的 JavaScript 代码不变)
+  gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
+  gsap.from("nav", { opacity: 0, y: -10, duration: 0.6, delay: 0.2, ease: "power3.out" });
+  gsap.from("main", { opacity: 0, y: 20, duration: 0.6, delay: 0.4, ease: "power3.out" });
+  gsap.from("footer", { opacity: 0, y: 20, duration: 0.6, delay: 0.6, ease: "power3.out" });
+
+  let currentState = { current_step: 0, conversation: [], max_completed_step: 0 };  // 新增 max_completed_step
+  const userInput = document.getElementById('user-input');
+  const sendTextBtn = document.getElementById('sendTextBtn');
+  const chatBox = document.getElementById('chat-box');
+  const restartBtn = document.getElementById('restartBtn');
+  const stageSelect = document.getElementById('stage-select');
+  const jumpStageBtn = document.getElementById('jumpStageBtn');
+  const nextStageBtn = document.getElementById('nextStageBtn');
+  const structureContainer = document.getElementById('dynamic-structure'); // 动态结构容器
+
+  function disableUserInput() {
+    userInput.disabled = true;
+    sendTextBtn.disabled = true;
+    nextStageBtn.disabled = true;
+  }
+
+  function enableUserInput() {
+    userInput.disabled = false;
+    sendTextBtn.disabled = false;
+    nextStageBtn.disabled = false;
+  }
+
+  function sendMessage(message = '', nextStep = false) {
+    if (!message) {
+      message = userInput.value;
+    }
+    if (!message.trim() && currentState.current_step !== 0 && !nextStep) return;
+
+    disableUserInput();
+
+    if (message.trim() && !nextStep) {
+      chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
+    }
+    userInput.value = '';
+
+    const bodyData = nextStep
+            ? { state: currentState, force_next_step: true }
+            : { message: message, state: currentState };
+
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(bodyData)
+    })
+            .then(response => response.json())
+            .then(data => {
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              if (data.response) {
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+
+              currentState = data.state;
+              updateUI(currentState.current_step, data.structure); // 更新UI和结构
+
+              enableUserInput();
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
+              enableUserInput();
+            });
+  }
+
+  function updateUI(step, structure) {
+    structureContainer.innerHTML = ''; // 清空结构容器
+    structure.forEach((stage, index) => {
+      const stepItem = document.createElement('div');
+      stepItem.classList.add('structure-item');
+      stepItem.textContent = `步骤 ${index + 1}: ${stage.step}`;
+      stepItem.style.backgroundColor = index <= step ? '#d1fae5' : 'white'; // 当前步骤和已完成步骤标记
+      structureContainer.appendChild(stepItem);
+
+      if (index < structure.length - 1) {
+        const arrow = document.createElement('div');
+        arrow.classList.add('structure-arrow');
+        structureContainer.appendChild(arrow);
+      }
+
+      // 更新下拉菜单，添加已完成的步骤
+      if (index <= currentState.max_completed_step) {  // 只添加已完成的步骤
+        updateStageSelect(index, stage.step);
+      }
+    });
+
+    if (step >= structure.length) {
+      document.querySelector('h1').textContent = 'AI 作文答疑系统';
+      userInput.placeholder = '在这里输入你的问题...';
+    } else {
+      document.querySelector('h1').textContent = 'AI 作文引导系统';
+      userInput.placeholder = '在这里输入你的回答...';
+    }
+  }
+
+  // 更新下拉菜单
+  function updateStageSelect(completedStep, stepLabel) {
+    const options = stageSelect.options;
+    const existingOptions = Array.from(options).map(option => option.value);
+
+    if (!existingOptions.includes(String(completedStep))) {
+      const option = document.createElement('option');
+      option.value = completedStep;
+      option.text = `返回 ${stepLabel} 阶段`;
+      stageSelect.appendChild(option);
+    }
+  }
+
+  window.addEventListener('load', function() {
+    sendMessage('');
+  });
+
+  sendTextBtn.addEventListener('click', function() {
+    sendMessage();
+  });
+
+  nextStageBtn.addEventListener('click', function() {
+    // 用户不再需要输入内容，直接允许跳到下一步
+    const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
+    chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
+    sendMessage(presetUserMessage, true);
+  });
+
+
+  restartBtn.addEventListener('click', function() {
+    currentState = { current_step: 0, conversation: [], max_completed_step: 0 };  // 重置 max_completed_step
+    chatBox.innerHTML = '';
+    stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
+    sendMessage('');
+  });
+
+  jumpStageBtn.addEventListener('click', function() {
+    const selectedStep = stageSelect.value;
+    if (selectedStep !== "") {
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ state: currentState, jump_to_step: parseInt(selectedStep) })
+      })
+              .then(response => response.json())
+              .then(data => {
+                currentState = data.state;
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                updateUI(currentState.current_step, data.structure);
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '跳转阶段时发生了一个错误。'}</div>`;
+              });
+    }
+  });
+
+  userInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      if (e.ctrlKey) {
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
+        let value = this.value;
+        this.value = value.slice(0, start) + "\n" + value.slice(end);
+        this.selectionStart = this.selectionEnd = start + 1;
+        e.preventDefault();
+      } else {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+  });
+
+  document.getElementById('voiceInputBtn').addEventListener('click', function() {
+    alert('语音输入功能尚未实现');
+  });
 </script>
 
 </body>
