@@ -36,14 +36,12 @@ def guided_essay_flow(user_input, state):
     if user_input:
         conversation.append({"role": "user", "content": user_input})
 
-    # 跳转到特定步骤，只允许跳转到已到达或当前的步骤
+    # 跳转到特定步骤
     if 'jump_to_step' in state:
         new_step = state['jump_to_step']
-        max_step = state.get('max_reached_step', current_step)  # 只能跳到到过的最大步骤
-        if new_step >= 0 and new_step <= max_step:
+        if new_step >= 0 and new_step < len(config['flow']):
             new_state = {
                 'current_step': new_step,
-                'max_reached_step': max_step,  # 保存已到达的最大步骤
                 'conversation': conversation
             }
             return config['flow'][new_step]['display_text'], new_state, config['flow']
@@ -52,7 +50,7 @@ def guided_essay_flow(user_input, state):
 
     # 第一步时无需用户输入直接展示
     if not user_input and current_step == 0:
-        return step_config['display_text'], {'current_step': 0, 'max_reached_step': 0, 'conversation': conversation}, config['flow']
+        return step_config['display_text'], {'current_step': 0, 'conversation': conversation}, config['flow']
 
     # 准备调用 AI 模型的提示内容，包括系统提示和对话记录
     prompt = [
@@ -67,14 +65,12 @@ def guided_essay_flow(user_input, state):
     # 更新状态，保留当前步骤和对话记录
     new_state = {
         'current_step': current_step,
-        'max_reached_step': max(current_step, state.get('max_reached_step', 0)),  # 记录用户已到达的最大步骤
         'conversation': conversation
     }
 
-    # 如果用户强制要求跳到下一步
-    if 'force_next_step' in state:
+    # 如果 AI 回复中包含“继续下一步”，或用户强制要求跳到下一步
+    if "继续下一步" in response or 'force_next_step' in state:
         new_state['current_step'] = current_step + 1
-        new_state['max_reached_step'] = new_state['current_step']  # 更新已到达的最大步骤
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
 
