@@ -24,6 +24,7 @@ def guided_essay_flow(user_input, state):
         return "配置加载失败，请检查配置文件。", state, []
 
     current_step = state.get('current_step', 0)
+    max_completed_step = state.get('max_completed_step', 0)  # 新增，记录用户到达的最高步骤
 
     if current_step >= len(config['flow']):
         # 如果流程完成，返回完成信息、状态和步骤结构
@@ -36,23 +37,22 @@ def guided_essay_flow(user_input, state):
     if user_input:
         conversation.append({"role": "user", "content": user_input})
 
-    # 跳转到特定步骤，但只能跳转到已经到过的阶段
+    # 跳转到特定步骤，只能跳到用户到过的最大步骤
     if 'jump_to_step' in state:
         new_step = state['jump_to_step']
-        if new_step <= current_step:
-            # 仅允许跳转到已到达的步骤
+        if new_step >= 0 and new_step <= max_completed_step:
             new_state = {
                 'current_step': new_step,
-                'conversation': conversation
+                'conversation': conversation,
+                'max_completed_step': max_completed_step  # 保留最高步骤记录
             }
             return config['flow'][new_step]['display_text'], new_state, config['flow']
         else:
-            # 无效跳转请求
-            return "无效的阶段跳转请求。您只能跳转到已经完成的步骤。", state, config['flow']
+            return "无效的阶段跳转请求。", state, config['flow']
 
     # 第一步时无需用户输入直接展示
     if not user_input and current_step == 0:
-        return step_config['display_text'], {'current_step': 0, 'conversation': conversation}, config['flow']
+        return step_config['display_text'], {'current_step': 0, 'conversation': conversation, 'max_completed_step': 0}, config['flow']
 
     # 准备调用 AI 模型的提示内容，包括系统提示和对话记录
     prompt = [
@@ -67,14 +67,23 @@ def guided_essay_flow(user_input, state):
     # 更新状态，保留当前步骤和对话记录
     new_state = {
         'current_step': current_step,
-        'conversation': conversation
+        'conversation': conversation,
+        'max_completed_step': max_completed_step
     }
 
-    # 去掉原本对用户输入有效性的判断，直接跳到下一步
-    if 'force_next_step' in state:
+    # 当 AI 回复中包含“继续下一步”或者用户输入有效并强制跳到下一步时
+    if "继续下一步" in response or ('force_next_step' in state and user_input):
+        # 更新到下一步，并更新用户已完成的最高步骤
         new_state['current_step'] = current_step + 1
+        new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
+        else:
+            return "写作流程已完成。", new_state, config['flow']
+
+    # 如果用户输入无效但试图跳过，返回错误信息
+    if 'force_next_step' in state and not user_input:
+        return "请在当前阶段提供有效的输入，才能跳到下一步。", new_state, config['flow']
 
     return response, new_state, config['flow']
 
@@ -86,7 +95,7 @@ def chat():
     try:
         body = request.json
         user_input = body.get('message', '')
-        state = body.get('state', {'current_step': 0, 'conversation': []})
+        state = body.get('state', {'current_step': 0, 'conversation': [], 'max_completed_step': 0})
 
         # 检查是否需要跳到特定阶段
         jump_to_step = body.get('jump_to_step', None)

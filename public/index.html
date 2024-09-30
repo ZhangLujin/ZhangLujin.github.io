@@ -247,7 +247,7 @@
   gsap.from("main", { opacity: 0, y: 20, duration: 0.6, delay: 0.4, ease: "power3.out" });
   gsap.from("footer", { opacity: 0, y: 20, duration: 0.6, delay: 0.6, ease: "power3.out" });
 
-  let currentState = { current_step: 0, conversation: [] };
+  let currentState = { current_step: 0, conversation: [], max_completed_step: 0 };  // 新增 max_completed_step
   const userInput = document.getElementById('user-input');
   const sendTextBtn = document.getElementById('sendTextBtn');
   const chatBox = document.getElementById('chat-box');
@@ -330,8 +330,10 @@
         structureContainer.appendChild(arrow);
       }
 
-      // 更新下拉菜单，添加完成的步骤
-      updateStageSelect(index, stage.step);
+      // 更新下拉菜单，添加已完成的步骤
+      if (index <= currentState.max_completed_step) {  // 只添加已完成的步骤
+        updateStageSelect(index, stage.step);
+      }
     });
 
     if (step >= structure.length) {
@@ -375,7 +377,7 @@
   });
 
   restartBtn.addEventListener('click', function() {
-    currentState = { current_step: 0, conversation: [] };
+    currentState = { current_step: 0, conversation: [], max_completed_step: 0 };  // 重置 max_completed_step
     chatBox.innerHTML = '';
     stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
     sendMessage('');
