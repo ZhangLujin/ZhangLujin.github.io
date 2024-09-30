@@ -213,6 +213,14 @@
   <div class="w-1/2 pl-4">
     <div class="structure-container card p-4">
       <h2 class="text-lg font-semibold mb-4">作文结构</h2>
+      <div class="mb-4">
+        <label for="stage-select" class="block text-sm font-medium text-gray-700">选择返回的阶段：</label>
+        <select id="stage-select" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+          <option value="">选择你要跳转的阶段</option>
+          <!-- 动态添加已完成的阶段选项 -->
+        </select>
+        <button class="btn btn-accent mt-2" id="jumpStageBtn">跳转阶段</button>
+      </div>
       <div class="structure-item">主题</div>
       <div class="structure-arrow"></div>
       <div class="structure-item">开头</div>
@@ -242,7 +250,6 @@
 </footer>
 
 <script>
-  // 添加动画和交互
   gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
   gsap.from("nav", { opacity: 0, y: -10, duration: 0.6, delay: 0.2, ease: "power3.out" });
   gsap.from("main", { opacity: 0, y: 20, duration: 0.6, delay: 0.4, ease: "power3.out" });
@@ -253,6 +260,8 @@
   const sendTextBtn = document.getElementById('sendTextBtn');
   const chatBox = document.getElementById('chat-box');
   const restartBtn = document.getElementById('restartBtn');
+  const stageSelect = document.getElementById('stage-select');
+  const jumpStageBtn = document.getElementById('jumpStageBtn');
 
   function disableUserInput() {
     userInput.disabled = true;
@@ -306,13 +315,13 @@
             });
   }
 
-
   function updateUI(step) {
     const structureItems = document.querySelectorAll('.structure-item');
     const steps = ['主题', '开头', '主体', '结尾', '标题'];
     structureItems.forEach((item, index) => {
       if (index < step) {
         item.style.backgroundColor = '#d1fae5'; // 完成的步骤
+        updateStageSelect(index);  // 更新下拉菜单
       } else if (index === step) {
         item.style.backgroundColor = '#fef3c7'; // 当前步骤
       } else {
@@ -326,6 +335,21 @@
     } else {
       document.querySelector('h1').textContent = 'AI 作文引导系统';
       userInput.placeholder = '在这里输入你的回答...';
+    }
+  }
+
+  // 更新阶段选择菜单
+  function updateStageSelect(completedStep) {
+    const options = stageSelect.options;
+    const existingOptions = Array.from(options).map(option => option.value);
+    const steps = ['主题', '开头', '主体', '结尾', '标题'];
+    const stepLabel = steps[completedStep];
+
+    if (!existingOptions.includes(String(completedStep))) {
+      const option = document.createElement('option');
+      option.value = completedStep;
+      option.text = `返回 ${stepLabel} 阶段`;
+      stageSelect.appendChild(option);
     }
   }
 
@@ -343,7 +367,32 @@
   restartBtn.addEventListener('click', function() {
     currentState = { current_step: 0 };
     chatBox.innerHTML = '';
+    stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';  // 重置下拉菜单
     sendMessage('');
+  });
+
+  // 处理跳转阶段事件
+  jumpStageBtn.addEventListener('click', function() {
+    const selectedStep = stageSelect.value;
+    if (selectedStep !== "") {
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ state: currentState, jump_to_step: parseInt(selectedStep) })
+      })
+              .then(response => response.json())
+              .then(data => {
+                currentState = data.state;
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> 跳转到阶段 ${selectedStep}</div>`;
+                updateUI(currentState.current_step);
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '跳转阶段时发生了一个错误。'}</div>`;
+              });
+    }
   });
 
   // 修改键盘事件处理
