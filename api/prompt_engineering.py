@@ -24,70 +24,49 @@ def load_config():
 def guided_essay_flow(user_input, state):
     # 加载配置文件
     config = load_config()
-    # 如果配置加载失败，返回错误信息
     if not config:
         return "配置加载失败，请检查配置文件。", state
 
-    # 获取当前步骤，默认是 0
+    # 获取当前步骤
     current_step = state.get('current_step', 0)
-    print(f"Current step: {current_step}")
-
-    # 如果当前步骤超过了流程长度，说明流程已完成
-    if current_step >= len(config['flow']):
-        return "写作流程已完成。", state
-
-    # 获取当前步骤的配置信息
     step_config = config['flow'][current_step]
 
     # 获取对话记录，默认为空列表
     conversation = state.get('conversation', [])
 
-    # 处理跳转逻辑，如果用户请求跳转到某个阶段
-    if 'jump_to_step' in state:
-        new_step = state['jump_to_step']
-        if new_step >= 0 and new_step < len(config['flow']):
-            new_state = {
-                'current_step': new_step,
-                'conversation': conversation
-            }
-            step_config = config['flow'][new_step]
-            return step_config['display_text'], new_state
-        else:
-            return "无效的阶段跳转请求。", state
+    # 确保用户输入不为空
+    if not user_input.strip():
+        return "请提供学生的回答呀，没有回答我没法进行评估呢。", state
 
-    # 如果用户输入为空且在第 0 步，返回当前步骤的提示文本
-    if not user_input and current_step == 0:
-        return step_config['display_text'], {'current_step': 0, 'conversation': conversation}
+    # 将用户输入添加到对话记录中
+    conversation.append({"role": "user", "content": user_input})
 
-    # 准备调用 AI 模型的提示内容，包括系统提示和对话记录
+    # 生成提示内容，准备调用 AI 模型
     prompt = [
         {"role": "system", "content": step_config['system_prompt']},
         *conversation
     ]
 
-    # 调用 OpenAI API 获取 AI 回复
+    # 调用 AI 模型
     response = call_openai_api(prompt)
+
     # 将 AI 回复添加到对话记录中
     conversation.append({"role": "assistant", "content": response})
 
-    # 更新状态，保留当前步骤和对话记录
+    # 更新状态
     new_state = {
         'current_step': current_step,
         'conversation': conversation
     }
 
-    # 如果 AI 回复中包含"继续下一步"或用户手动要求跳到下一步，更新步骤并返回下一步的提示文本
-    if "继续下一步" in response or 'force_next_step' in state:
-        # 检查用户是否已经作答，才能允许强制进入下一步
-        if user_input.strip() == "":
-            return "请先回答当前问题，然后再跳到下一阶段。", new_state
+    # 如果 AI 模型认为可以继续下一步，更新步骤
+    if "继续下一步" in response:
         new_state['current_step'] = current_step + 1
-        # 如果没有超过流程的最大步骤数，返回下一步的提示文本
         if new_state['current_step'] < len(config['flow']):
             return config['flow'][new_state['current_step']]['display_text'], new_state
 
-    # 返回 AI 回复和新的状态
     return response, new_state
+
 
 # 处理聊天请求的 Flask 路由函数
 def chat():
