@@ -1,79 +1,157 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>小学生AI写作助手</title>
-  <!-- CSS 引用路径修改为当前目录 -->
-  <link rel="stylesheet" href="./styles.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+  <title>Interactive Mind Map</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/2.1.52/go.js"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    #myDiagramDiv {
+      width: 100vw;
+      height: 100vh;
+      background-color: #e0f7fa;
+      border: 2px solid #80deea;
+    }
+
+    /* 节点的卡通风格 */
+    .cartoonNode {
+      background-color: #ffeb3b;
+      border-radius: 15px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cartoonNode:hover {
+      background-color: #fff176;
+    }
+
+    .cartoonLink {
+      stroke: #f57c00;
+      stroke-width: 3px;
+      stroke-dasharray: 5, 5;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-100 to-purple-100">
-<header class="bg-white py-4 shadow-lg">
-  <div class="container flex justify-between items-center">
-    <div class="flex items-center">
-      <div class="ai-logo mr-4 float-animation">AI</div>
-      <h1 class="text-3xl font-bold text-primary-color">小学生AI写作助手</h1>
-    </div>
-    <button class="btn btn-primary" id="restartBtn">重新开始</button>
-  </div>
-</header>
+<body>
 
-<nav class="bg-white shadow-md mt-4">
-  <div class="container flex justify-between py-2">
-    <div class="nav-item">写作引导</div>
-    <div class="nav-item">文章结构</div>
-    <div class="nav-item">作文答疑</div>
-    <div class="nav-item">写作反馈</div>
-  </div>
-</nav>
+<div id="myDiagramDiv"></div>
 
-<main class="flex-grow flex container overflow-hidden mt-6">
-  <div class="w-1/2 pr-4 flex flex-col h-full">
-    <div class="chat-container card p-6 flex-grow overflow-y-auto">
-      <div id="chat-box"></div>
-    </div>
-    <div class="mt-4">
-      <textarea class="input-area" id="user-input" placeholder="在这里输入你的想法..."></textarea>
-      <div class="flex justify-between mt-4 items-center">
-        <button class="btn btn-accent flex-grow mr-2" id="voiceInputBtn">语音输入</button>
-        <button class="btn btn-primary flex-grow ml-2" id="sendTextBtn">发送</button>
-        <button class="btn btn-next ml-2" id="nextStageBtn">下一步</button>
-      </div>
-    </div>
-  </div>
-  <div class="w-1/2 pl-4">
-    <div class="structure-container card p-6">
-      <h2 class="text-2xl font-bold mb-6 text-center text-secondary-color">作文步骤</h2>
-      <div class="mb-6">
-        <label for="stage-select" class="block text-lg font-medium text-gray-700 mb-2">选择返回的阶段：</label>
-        <select id="stage-select" class="w-full py-3 px-4 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-color focus:border-primary-color text-lg">
-          <option value="">选择你要跳转的阶段</option>
-        </select>
-        <button class="btn btn-accent mt-4 w-full" id="jumpStageBtn">跳转阶段</button>
-      </div>
-      <div id="dynamic-structure"></div>
-    </div>
-  </div>
-</main>
+<script>
+  function init() {
+    var $ = go.GraphObject.make;
 
-<footer class="bg-white shadow-lg mt-6">
-  <div class="container py-4 flex justify-between items-center">
-    <div class="search-container flex-grow mr-4">
-      <input type="text" placeholder="搜索写作技巧..." class="text-lg">
-      <span class="search-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-        </svg>
-      </span>
-    </div>
-    <button class="btn btn-accent mr-4">好词好句</button>
-    <button class="btn btn-accent">范文/素材</button>
-  </div>
-</footer>
+    // 创建 Diagram 实例
+    var myDiagram =
+            $(go.Diagram, "myDiagramDiv", {
+              "undoManager.isEnabled": true,  // 启用撤销重做功能
+              "clickCreatingTool.archetypeNodeData": { text: "New Node" },  // 点击空白区域生成新节点
+              layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 })
+            });
 
-<!-- JS 引用路径修改为当前目录 -->
-<script src="./script.js"></script>
+    // 定义节点样式
+    myDiagram.nodeTemplate =
+            $(go.Node, "Auto",
+                    { locationSpot: go.Spot.Center },
+                    $(go.Shape, "RoundedRectangle",
+                            { fill: "#ffeb3b", stroke: null, width: 100, height: 50 },
+                            new go.Binding("fill", "color")),
+                    $(go.TextBlock, { margin: 8, editable: true, font: "bold 12pt 'Comic Sans MS'", stroke: "#000" },
+                            new go.Binding("text").makeTwoWay())
+            );
+
+    // 定义连线样式
+    myDiagram.linkTemplate =
+            $(go.Link,
+                    {
+                      routing: go.Link.Orthogonal,
+                      corner: 5,
+                      relinkableFrom: true,
+                      relinkableTo: true,
+                      reshapable: true,
+                      resegmentable: true
+                    },
+                    $(go.Shape, { stroke: "#f57c00", strokeWidth: 3, strokeDashArray: [5, 5] }),
+                    $(go.Shape, { toArrow: "Standard", fill: "#f57c00" })
+            );
+
+    // 初始数据
+    myDiagram.model = new go.GraphLinksModel(
+            [
+              { key: "Root", text: "Root Node", color: "#ffeb3b" }
+            ],
+            []
+    );
+
+    // 双击空白区域创建新节点
+    myDiagram.toolManager.clickCreatingTool.doMouseUp = function() {
+      var diagram = this.diagram;
+      var pt = diagram.lastInput.documentPoint;
+      diagram.startTransaction("Create Node");
+      var newNodeData = { text: "New Node", color: "#ffeb3b" };
+      diagram.model.addNodeData(newNodeData);
+      var newNode = diagram.findPartForData(newNodeData);
+      if (newNode !== null) {
+        newNode.location = pt;
+      }
+      diagram.commitTransaction("Create Node");
+    };
+
+    // 键盘事件监听
+    myDiagram.addDiagramListener("BackgroundSingleClicked", function(e) {
+      e.diagram.currentTool.doCancel();
+    });
+
+    myDiagram.addDiagramListener("ObjectSingleClicked", function(e) {
+      myDiagram.commandHandler.select(e.subject.part);
+    });
+
+    // 处理键盘事件：Enter键添加同级节点，Tab键添加子节点，Backspace键删除
+    myDiagram.addDiagramListener("KeyDown", function(e) {
+      var node = e.diagram.selection.first();
+      if (!node) return;
+
+      switch (e.event.key) {
+        case "Enter":  // 创建同级节点
+          myDiagram.startTransaction("Add Node");
+          var siblingData = { text: "New Sibling", color: "#ffeb3b" };
+          myDiagram.model.addNodeData(siblingData);
+          var parentKey = myDiagram.model.getParentKeyForNodeData(node.data);
+          myDiagram.model.addLinkData({ from: parentKey, to: siblingData.key });
+          myDiagram.commitTransaction("Add Node");
+          break;
+
+        case "Tab":  // 创建子节点
+          myDiagram.startTransaction("Add Child");
+          var childData = { text: "New Child", color: "#ffeb3b" };
+          myDiagram.model.addNodeData(childData);
+          myDiagram.model.addLinkData({ from: node.data.key, to: childData.key });
+          myDiagram.commitTransaction("Add Child");
+          break;
+
+        case "Backspace":  // 删除选中的节点
+          myDiagram.startTransaction("Delete Node");
+          myDiagram.remove(node);
+          myDiagram.commitTransaction("Delete Node");
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    return myDiagram;
+  }
+
+  // 初始化思维导图
+  init();
+
+</script>
+
 </body>
 </html>
