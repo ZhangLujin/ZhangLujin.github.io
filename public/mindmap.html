@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Mind Map</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gojs/2.1.52/go.js"></script>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', sans-serif;
+      background-color: #f0f8ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    #myDiagramDiv {
+      width: 100vw;
+      height: 100vh;
+      background-color: #e0f7fa;
+      border: 2px solid #80deea;
+    }
+
+    /* 节点的卡通风格 */
+    .cartoonNode {
+      background-color: #ffeb3b;
+      border-radius: 15px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cartoonNode:hover {
+      background-color: #fff176;
+    }
+
+    .cartoonLink {
+      stroke: #f57c00;
+      stroke-width: 3px;
+      stroke-dasharray: 5, 5;
+    }
+  </style>
+</head>
+<body>
+
+<div id="myDiagramDiv"></div>
+
+<script>
+  function init() {
+    var $ = go.GraphObject.make;
+
+    // 创建 Diagram 实例
+    var myDiagram =
+            $(go.Diagram, "myDiagramDiv", {
+              "undoManager.isEnabled": true,  // 启用撤销重做功能
+              "clickCreatingTool.archetypeNodeData": { text: "New Node" },  // 点击空白区域生成新节点
+              layout: $(go.TreeLayout, { angle: 90, layerSpacing: 35 })
+            });
+
+    // 定义节点样式
+    myDiagram.nodeTemplate =
+            $(go.Node, "Auto",
+                    { locationSpot: go.Spot.Center },
+                    $(go.Shape, "RoundedRectangle",
+                            { fill: "#ffeb3b", stroke: null, width: 100, height: 50 },
+                            new go.Binding("fill", "color")),
+                    $(go.TextBlock, { margin: 8, editable: true, font: "bold 12pt 'Comic Sans MS'", stroke: "#000" },
+                            new go.Binding("text").makeTwoWay())
+            );
+
+    // 定义连线样式
+    myDiagram.linkTemplate =
+            $(go.Link,
+                    {
+                      routing: go.Link.Orthogonal,
+                      corner: 5,
+                      relinkableFrom: true,
+                      relinkableTo: true,
+                      reshapable: true,
+                      resegmentable: true
+                    },
+                    $(go.Shape, { stroke: "#f57c00", strokeWidth: 3, strokeDashArray: [5, 5] }),
+                    $(go.Shape, { toArrow: "Standard", fill: "#f57c00" })
+            );
+
+    // 初始数据
+    myDiagram.model = new go.GraphLinksModel(
+            [
+              { key: "Root", text: "Root Node", color: "#ffeb3b" }
+            ],
+            []
+    );
+
+    // 双击空白区域创建新节点
+    myDiagram.toolManager.clickCreatingTool.doMouseUp = function() {
+      var diagram = this.diagram;
+      var pt = diagram.lastInput.documentPoint;
+      diagram.startTransaction("Create Node");
+      var newNodeData = { text: "New Node", color: "#ffeb3b" };
+      diagram.model.addNodeData(newNodeData);
+      var newNode = diagram.findPartForData(newNodeData);
+      if (newNode !== null) {
+        newNode.location = pt;
+      }
+      diagram.commitTransaction("Create Node");
+    };
+
+    // 键盘事件监听
+    myDiagram.addDiagramListener("BackgroundSingleClicked", function(e) {
+      e.diagram.currentTool.doCancel();
+    });
+
+    myDiagram.addDiagramListener("ObjectSingleClicked", function(e) {
+      myDiagram.commandHandler.select(e.subject.part);
+    });
+
+    // 处理键盘事件：Enter键添加同级节点，Tab键添加子节点，Backspace键删除
+    myDiagram.addDiagramListener("KeyDown", function(e) {
+      var node = e.diagram.selection.first();
+      if (!node) return;
+
+      switch (e.event.key) {
+        case "Enter":  // 创建同级节点
+          myDiagram.startTransaction("Add Node");
+          var siblingData = { text: "New Sibling", color: "#ffeb3b" };
+          myDiagram.model.addNodeData(siblingData);
+          var parentKey = myDiagram.model.getParentKeyForNodeData(node.data);
+          myDiagram.model.addLinkData({ from: parentKey, to: siblingData.key });
+          myDiagram.commitTransaction("Add Node");
+          break;
+
+        case "Tab":  // 创建子节点
+          myDiagram.startTransaction("Add Child");
+          var childData = { text: "New Child", color: "#ffeb3b" };
+          myDiagram.model.addNodeData(childData);
+          myDiagram.model.addLinkData({ from: node.data.key, to: childData.key });
+          myDiagram.commitTransaction("Add Child");
+          break;
+
+        case "Backspace":  // 删除选中的节点
+          myDiagram.startTransaction("Delete Node");
+          myDiagram.remove(node);
+          myDiagram.commitTransaction("Delete Node");
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    return myDiagram;
+  }
+
+  // 初始化思维导图
+  init();
+
+</script>
+
+</body>
+</html>
