@@ -1,132 +1,437 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>思维导图</title>
+  <title>小学生AI写作助手</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
-    body, html {
-      height: 100%;
-      margin: 0;
-      padding: 0;
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    :root {
+      --primary-color: #FF6B6B;
+      --secondary-color: #4ECDC4;
+      --text-color: #2C3E50;
+      --border-color: #E0E0E0;
+      --accent-color: #FFD93D;
+      --bg-color: #F8F9FA;
+      --next-btn-color: #6c757d;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      width: 100%;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .ai-logo {
+      width: 60px;
+      height: 60px;
+      background-color: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 24px;
+      box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+    }
+
+    .nav-item {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 15px;
+      font-weight: 500;
+    }
+
+    .nav-item:hover {
+      background-color: var(--secondary-color);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    .chat-container {
+      height: calc(100% - 100px);
+      overflow-y: auto;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #FF8E8E;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+    }
+
+    .btn-accent {
+      background-color: var(--accent-color);
+      color: var(--text-color);
+    }
+
+    .btn-accent:hover {
+      background-color: #FFE66D;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(255, 217, 61, 0.3);
+    }
+
+    .btn-next {
+      background-color: var(--next-btn-color);
+      color: white;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+    }
+
+    .btn-next:hover {
+      background-color: #5a6268;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 5px rgba(108, 117, 125, 0.3);
+    }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      background-color: white;
+      border-radius: 15px;
+      padding: 0.75rem 1.5rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .search-container input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    .search-icon {
+      color: var(--primary-color);
+    }
+
+    .input-area {
+      resize: none;
+      width: 100%;
+      height: 100px;
+      padding: 1rem;
+      border-radius: 15px;
+      border: 2px solid var(--border-color);
+      background-color: white;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .input-area:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+    }
+
+    .chat-message {
+      border-radius: 20px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      max-width: 80%;
+    }
+
+    .user-message {
+      background-color: #E9F7EF;
+      margin-left: auto;
+      border-bottom-right-radius: 0;
+    }
+
+    .ai-message {
+      background-color: #EBF5FB;
+      margin-right: auto;
+      border-bottom-left-radius: 0;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--secondary-color);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3DAFA9;
     }
 
     #mindmap {
       width: 100%;
       height: 100%;
-      background-color: #f0f4f8;
-      background-image:
-              linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
-      background-size: 20px 20px;
+      border: 1px solid #ccc;
+      border-radius: 15px;
+      background-color: #fff;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100%;
+      background-color: #fff;
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+      transition: right 0.3s ease;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    .sidebar.open {
+      right: 0;
+    }
+
+    .sidebar-toggle {
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px;
+      border-top-left-radius: 5px;
+      border-bottom-left-radius: 5px;
+      cursor: pointer;
+      z-index: 1001;
+    }
+
+    .structure-item {
+      border: 2px solid var(--border-color);
+      border-radius: 15px;
+      padding: 1rem;
+      margin: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      background-color: white;
+      font-weight: 500;
+    }
+
+    .structure-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .structure-arrow {
+      width: 2px;
+      height: 30px;
+      background-color: var(--border-color);
+      margin: 0 auto;
     }
 
     .operation-instructions {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.1), -5px -5px 15px rgba(255,255,255,0.5);
-    }
-
-    .instruction-item {
-      margin-bottom: 5px;
-    }
-
-    .instruction-icon {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      text-align: center;
-      line-height: 20px;
-      border-radius: 50%;
-      margin-right: 5px;
-    }
-
-    .add-node-icon { background-color: #48bb78; color: white; }
-    .add-child-icon { background-color: #4299e1; color: white; }
-    .edit-node-icon { background-color: #ed8936; color: white; }
-    .delete-node-icon { background-color: #e53e3e; color: white; }
-
-    #overview-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background-color: #f0f4f8;
-      border: none;
-      outline: none;
-      cursor: pointer;
-      box-shadow: 5px 5px 10px rgba(163,177,198,0.5), -5px -5px 10px rgba(255,255,255,0.5);
       display: flex;
       justify-content: center;
       align-items: center;
-      transition: all 0.3s ease;
+      background-color: #f0f4f8;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
     }
 
-    #overview-button:hover {
-      box-shadow: 3px 3px 5px rgba(163,177,198,0.5), -3px -3px 5px rgba(255,255,255,0.5);
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 10px;
+      font-size: 14px;
+      color: #4a5568;
     }
 
-    #overview-button:active {
-      box-shadow: inset 3px 3px 5px rgba(163,177,198,0.5), inset -3px -3px 5px rgba(255,255,255,0.5);
-    }
-
-    #overview-button svg {
+    .instruction-icon {
       width: 24px;
       height: 24px;
-      fill: #4a5568;
+      margin-right: 5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 50%;
+    }
+
+    .add-node-icon {
+      background-color: #48bb78;
+      color: white;
+    }
+
+    .add-child-icon {
+      background-color: #4299e1;
+      color: white;
+    }
+
+    .edit-node-icon {
+      background-color: #ed8936;
+      color: white;
+    }
+
+    .delete-node-icon {
+      background-color: #e53e3e;
+      color: white;
     }
   </style>
 </head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100">
+<header class="bg-white py-4 shadow-lg">
+  <div class="container flex justify-between items-center">
+    <div class="flex items-center">
+      <div class="ai-logo mr-4 float-animation">AI</div>
+      <h1 class="text-3xl font-bold text-primary-color">小学生AI写作助手</h1>
+    </div>
+    <button class="btn btn-primary" id="restartBtn">重新开始</button>
+  </div>
+</header>
 
-<body>
-<div class="operation-instructions">
-  <div class="instruction-item">
-    <span class="instruction-icon add-node-icon">+</span>
-    <span>回车: 添加同级节点</span>
+<nav class="bg-white shadow-md mt-4">
+  <div class="container flex justify-between py-2">
+    <div class="nav-item">写作引导</div>
+    <div class="nav-item">文章结构</div>
+    <div class="nav-item">作文答疑</div>
+    <div class="nav-item">写作反馈</div>
   </div>
-  <div class="instruction-item">
-    <span class="instruction-icon add-child-icon">⇥</span>
-    <span>Tab: 添加子节点</span>
+</nav>
+
+<main class="flex-grow flex container overflow-hidden mt-6">
+  <div class="w-1/2 pr-4 flex flex-col h-full">
+    <div class="chat-container card p-6 flex-grow overflow-y-auto">
+      <div id="chat-box"></div>
+    </div>
+    <div class="mt-4">
+      <textarea class="input-area" id="user-input" placeholder="在这里输入你的想法..."></textarea>
+      <div class="flex justify-between mt-4 items-center">
+        <button class="btn btn-accent flex-grow mr-2" id="voiceInputBtn">语音输入</button>
+        <button class="btn btn-primary flex-grow ml-2" id="sendTextBtn">发送</button>
+        <button class="btn btn-next ml-2" id="nextStageBtn">下一步</button>
+      </div>
+    </div>
   </div>
-  <div class="instruction-item">
-    <span class="instruction-icon edit-node-icon">✎</span>
-    <span>双击左键: 编辑节点</span>
+  <div class="w-1/2 pl-4">
+    <div class="operation-instructions">
+      <div class="instruction-item">
+        <div class="instruction-icon add-node-icon">+</div>
+        <span>回车: 添加节点</span>
+      </div>
+      <div class="instruction-item">
+        <div class="instruction-icon add-child-icon">⇥</div>
+        <span>Tab: 添加子节点</span>
+        <span>Enter: 添加同级节点</span>
+      </div>
+      <div class="instruction-item">
+        <div class="instruction-icon edit-node-icon">✎</div>
+        <span>双击左键: 编辑节点</span>
+      </div>
+      <div class="instruction-item">
+        <div class="instruction-icon delete-node-icon">✖</div>
+        <span>Delete: 删除节点</span>
+      </div>
+    </div>
+    <div id="mindmap"></div>
   </div>
-  <div class="instruction-item">
-    <span class="instruction-icon delete-node-icon">✖</span>
-    <span>Delete: 删除节点</span>
+</main>
+
+<footer class="bg-white shadow-lg mt-6">
+  <div class="container py-4 flex justify-between items-center">
+    <div class="search-container flex-grow mr-4">
+      <input type="text" placeholder="搜索写作技巧..." class="text-lg">
+      <span class="search-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+        </svg>
+      </span>
+    </div>
+    <button class="btn btn-accent mr-4">好词好句</button>
+    <button class="btn btn-accent">范文/素材</button>
   </div>
+</footer>
+
+<div class="sidebar">
+  <h2 class="text-2xl font-bold mb-6 text-center text-secondary-color p-4">作文步骤</h2>
+  <div class="mb-6 px-4">
+    <label for="stage-select" class="block text-lg font-medium text-gray-700 mb-2">选择返回的阶段：</label>
+    <select id="stage-select" class="w-full py-3 px-4 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-color focus:border-primary-color text-lg">
+      <option value="">选择你要跳转的阶段</option>
+    </select>
+    <button class="btn btn-accent mt-4 w-full" id="jumpStageBtn">跳转阶段</button>
+  </div>
+  <div id="dynamic-structure" class="px-4"></div>
 </div>
 
-<div id="mindmap"></div>
-
-<button id="overview-button" title="重新调整视图">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z"/>
+<div class="sidebar-toggle">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
   </svg>
-</button>
+</div>
 
 <script>
+  // 侧边栏切换功能
+  const sidebar = document.querySelector('.sidebar');
+  const sidebarToggle = document.querySelector('.sidebar-toggle');
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+  });
+
   // 初始化节点和边
   const nodes = new vis.DataSet([
     { id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } }
   ]);
-
   const edges = new vis.DataSet([]);
 
   const container = document.getElementById('mindmap');
   const data = { nodes, edges };
   const options = {
-    layout: { hierarchical: false },
+    layout: {
+      hierarchical: false
+    },
     nodes: {
       shape: 'box',
       widthConstraint: { minimum: 100, maximum: 200 },
@@ -138,7 +443,7 @@
     edges: {
       arrows: 'to',
       width: 2,
-      smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 }
+      smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 }
     },
     physics: { enabled: false },
     interaction: {
@@ -153,51 +458,55 @@
       hideEdgesOnDrag: false,
       hideNodesOnDrag: false
     },
-    manipulation: { enabled: false }
+    manipulation: {
+      enabled: false // 禁用默认的操作按钮
+    }
   };
 
-  // 添加重新调整视图的功能
-  const overviewButton = document.getElementById('overview-button');
-  overviewButton.addEventListener('click', () => {
-    network.fit({
-      animation: {
-        duration: 1000,
-        easingFunction: 'easeInOutQuad'
-      }
-    });
-  });
-
   const network = new vis.Network(container, data, options);
+
   let isEditingNode = false;
 
-  // 双击节点编辑
+  function getNextNodeId() {
+    const existingIds = nodes.getIds();
+    return Math.max(...existingIds) + 1;
+  }
+
   network.on('doubleClick', function (params) {
     if (params.nodes.length === 1) {
       isEditingNode = true;
       const nodeId = params.nodes[0];
       const node = nodes.get(nodeId);
-      const position = network.getPositions([nodeId])[nodeId];
-      const domPos = network.canvasToDOM(position);
-
       const input = document.createElement('textarea');
       input.value = node.label;
       input.style.position = 'absolute';
-      input.style.left = `${domPos.x - 100}px`;
-      input.style.top = `${domPos.y - 25}px`;
+      input.style.left = params.event.pageX + 'px';
+      input.style.top = params.event.pageY + 'px';
       input.style.zIndex = 1000;
       input.style.width = '200px';
       input.style.height = '50px';
       input.style.fontSize = '16px';
-      input.style.border = '2px solid #4299e1';
+      input.style.border = '2px solid #ccc';
       input.style.borderRadius = '8px';
       input.style.padding = '10px';
       input.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
-      input.style.backgroundColor = 'white';
       document.body.appendChild(input);
       input.focus();
       input.select();
 
-      const handleInputChange = () => {
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const newLabel = input.value.trim();
+          if (newLabel !== '') {
+            nodes.update({ id: nodeId, label: newLabel });
+          }
+          document.body.removeChild(input);
+          isEditingNode = false;
+        }
+      });
+
+      input.addEventListener('blur', () => {
         const newLabel = input.value.trim();
         if (newLabel !== '') {
           nodes.update({ id: nodeId, label: newLabel });
@@ -206,29 +515,11 @@
           document.body.removeChild(input);
         }
         isEditingNode = false;
-      };
-
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-          event.preventDefault();
-          handleInputChange();
-        }
-        // 阻止事件冒泡到全局键盘事件处理程序
-        event.stopPropagation();
       });
-
-      input.addEventListener('blur', handleInputChange);
     }
   });
 
-  // 键盘事件处理
   document.addEventListener('keydown', function (event) {
-    // 检查事件目标是否为输入框或文本区域
-    const tag = event.target.tagName;
-    if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
-      return; // 输入框或文本区域聚焦时不处理
-    }
-
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
       const selectedNode = selectedNodes[0];
@@ -250,29 +541,25 @@
         nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
         edges.add({ from: selectedNode, to: newNodeId });
         setTimeout(applyCustomLayout, 100);
-      } else if (event.key === 'Backspace' || event.key === 'Delete') {
-        event.preventDefault();
+      } else if (event.key === 'Backspace') {
         deleteNodeAndDescendants(selectedNode);
         setTimeout(applyCustomLayout, 100);
       }
     }
   });
 
-  // 拖动节点时禁用物理引擎
   network.on("dragStart", function (params) {
     if (params.nodes.length === 1) {
       network.setOptions({ physics: false });
     }
   });
 
-  // 拖动结束后应用自定义布局
   network.on("dragEnd", function (params) {
     if (params.nodes.length === 1) {
       applyCustomLayout();
     }
   });
 
-  // 当节点或边数据变化时，重新布局
   nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     applyCustomLayout();
   });
@@ -281,31 +568,27 @@
     applyCustomLayout();
   });
 
-  // 获取下一个节点ID
-  function getNextNodeId() {
-    const existingIds = nodes.getIds();
-    return Math.max(...existingIds) + 1;
-  }
-
-  // 应用自定义布局
   function applyCustomLayout() {
     const tree = buildTree();
     const roots = findRoots(tree);
-    const nodeSeparation = 120;
-    const levelSeparation = 180;
-    const startX = 50;
-    const startY = container.clientHeight / 2;
-    let currentY = startY;
+
+    const levelSeparation = 150;
+    const nodeSpacing = 220;
+    const startX = container.clientWidth / 2;
+    const startY = 50;
+
+    let currentX = startX;
     roots.forEach(root => {
-      currentY = layoutNode(root, 0, startX, currentY, nodeSeparation, levelSeparation);
+      currentX = layoutNode(root, 0, currentX, levelSeparation, nodeSpacing);
     });
+
     nodes.forEach(node => {
       nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
     });
+
     network.fit();
   }
 
-  // 构建树形结构
   function buildTree() {
     const tree = {};
     nodes.forEach(node => {
@@ -319,37 +602,37 @@
     return tree;
   }
 
-  // 查找根节点
   function findRoots(tree) {
-    return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
+    return Object.values(tree).filter(node =>
+            !edges.get().some(edge => edge.to === node.id)
+    );
   }
 
-  // 布局节点
-  function layoutNode(node, depth, xOffset, yOffset, nodeSeparation, levelSeparation) {
-    node.x = xOffset + depth * levelSeparation;
+  function layoutNode(node, depth, xOffset, levelSeparation, nodeSpacing) {
+    node.y = depth * levelSeparation;
     let numChildren = node.children.length;
     if (numChildren === 0) {
-      node.y = yOffset;
-      return yOffset + nodeSeparation;
+      node.x = xOffset;
+      return xOffset + nodeSpacing;
     }
-    let currentY = yOffset - (numChildren - 1) * nodeSeparation / 2;
+    let currentX = xOffset;
     node.children.forEach(child => {
-      currentY = layoutNode(child, depth + 1, xOffset, currentY, nodeSeparation, levelSeparation);
+      currentX = layoutNode(child, depth + 1, currentX, levelSeparation, nodeSpacing);
     });
     const firstChild = node.children[0];
     const lastChild = node.children[node.children.length - 1];
-    node.y = (firstChild.y + lastChild.y) / 2;
-    return currentY;
+    node.x = (firstChild.x + lastChild.x) / 2;
+    return currentX;
   }
 
-  // 删除节点及其子节点
   function deleteNodeAndDescendants(nodeId) {
     const descendants = getDescendants(nodeId);
     nodes.remove([nodeId, ...descendants]);
-    edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
+    edges.remove(edges.get().filter(edge =>
+            edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)
+    ));
   }
 
-  // 获取子孙节点
   function getDescendants(nodeId) {
     const descendants = [];
     const childEdges = edges.get().filter(edge => edge.from === nodeId);
@@ -360,12 +643,25 @@
     return descendants;
   }
 
-  // 初始布局
-  applyCustomLayout();
+  function willFormCycle(fromId, toId) {
+    const visited = new Set();
 
-  // 窗口大小改变时重新布局
-  window.addEventListener('resize', applyCustomLayout);
+    function dfs(currentId) {
+      if (currentId === fromId) return true;
+      if (visited.has(currentId)) return false;
+
+      visited.add(currentId);
+      const childEdges = edges.get().filter(edge => edge.from === currentId);
+      for (let edge of childEdges) {
+        if (dfs(edge.to)) return true;
+      }
+      return false;
+    }
+
+    return dfs(toId);
+  }
+
+  applyCustomLayout();
 </script>
 </body>
-
 </html>
