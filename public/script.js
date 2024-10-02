@@ -70,14 +70,12 @@ function sendMessage(message = '', nextStep = false) {
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.error);
-            currentState = data.state;
-            updateUI(currentState.current_step, data.structure);
-
             if (data.response) {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
                 scrollChatToBottom();
             }
-
+            currentState = data.state;
+            updateUI(currentState.current_step, data.structure);
             enableUserInput();
         })
         .catch(error => {
