@@ -47,9 +47,10 @@ function sendMessage(message = '', nextStep = false) {
     disableUserInput();
 
     if (message.trim() && !nextStep) {
-        elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
+        elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${escapeHTML(message)}</div>`;
     }
     elements.userInput.value = '';
+    updateChatScroll();
 
     const bodyData = nextStep ? { state, force_next_step: true } : { message, state };
 
@@ -62,18 +63,27 @@ function sendMessage(message = '', nextStep = false) {
         .then(data => {
             if (data.error) throw new Error(data.error);
             if (data.response) {
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${escapeHTML(data.response)}</div>`;
+                updateChatScroll();
             }
             state.currentStep = data.state.current_step;
+            if (data.state.max_completed_step > state.maxCompletedStep) {
+                state.maxCompletedStep = data.state.max_completed_step;
+            }
             updateUI(state.currentStep, data.structure);
             enableUserInput();
         })
         .catch(error => {
             console.error('Error:', error);
-            elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
+            elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${escapeHTML(error.message) || '发生了一个错误，请稍后重试。'}</div>`;
+            updateChatScroll();
             enableUserInput();
         });
+}
+
+// 更新聊天区域滚动
+function updateChatScroll() {
+    elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
 }
 
 // 更新界面
@@ -110,6 +120,13 @@ function updateStageSelect(completedStep, stepLabel) {
     }
 }
 
+// 转义HTML以防止XSS
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 // 页面加载时发送初始消息
 window.addEventListener('load', () => sendMessage(''));
 
@@ -119,25 +136,9 @@ elements.nextStageBtn.addEventListener('click', () => sendMessage("我觉得我�
 elements.restartBtn.addEventListener('click', () => { location.reload(); });
 elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
-    if (selectedStep !== "") sendMessage('', false);
-});
-
-// 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-elements.userInput.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-        if (event.ctrlKey) {
-            // Ctrl+Enter: send message
-            event.preventDefault();
-            sendMessage();
-        } else if (!event.shiftKey) {
-            // Enter without Shift or Ctrl: insert newline
-            event.preventDefault();
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            const value = this.value;
-            this.value = value.substring(0, start) + '\n' + value.substring(end);
-            this.selectionStart = this.selectionEnd = start + 1;
-        }
+    if (selectedStep !== "") {
+        state.currentStep = parseInt(selectedStep);
+        sendMessage('', false);
     }
 });
 
@@ -149,7 +150,7 @@ sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('open');
 });
 
-// 思维导图功能
+// --------------------- 新增的思维导图功能 ---------------------
 
 // 初始化节点和边
 const nodes = new vis.DataSet([
@@ -169,7 +170,7 @@ const options = {
         font: { size: 16, multi: true, face: 'Noto Sans SC' },
         borderWidth: 2,
         shadow: true,
-        fixed: { x: true, y: true }
+        fixed: { x: false, y: false }
     },
     edges: {
         arrows: 'to',
@@ -201,14 +202,14 @@ let isEditingNode = false;
 // 双击节点编辑
 network.on('doubleClick', function (params) {
     if (params.nodes.length === 1) {
-        isEditingNode = true;
         const nodeId = params.nodes[0];
         const node = nodes.get(nodeId);
+        const pointer = params.pointer.DOM;
         const input = document.createElement('textarea');
         input.value = node.label;
         input.style.position = 'absolute';
-        input.style.left = params.event.pageX + 'px';
-        input.style.top = params.event.pageY + 'px';
+        input.style.left = `${pointer.x}px`;
+        input.style.top = `${pointer.y}px`;
         input.style.zIndex = 1000;
         input.style.width = '200px';
         input.style.height = '50px';
@@ -221,61 +222,53 @@ network.on('doubleClick', function (params) {
         input.focus();
         input.select();
 
-        input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const newLabel = input.value.trim();
-                if (newLabel !== '') {
-                    nodes.update({ id: nodeId, label: newLabel });
-                }
-                document.body.removeChild(input);
-                isEditingNode = false;
-            }
-        });
-
-        input.addEventListener('blur', () => {
+        // 确认编辑
+        const confirmEdit = () => {
             const newLabel = input.value.trim();
             if (newLabel !== '') {
                 nodes.update({ id: nodeId, label: newLabel });
+                applyCustomLayout();
             }
             if (document.body.contains(input)) {
                 document.body.removeChild(input);
             }
             isEditingNode = false;
+        };
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                confirmEdit();
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            confirmEdit();
         });
     }
 });
 
 // 键盘事件处理
 document.addEventListener('keydown', function (event) {
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-        return; // 输入框或文本区域聚焦时不处理
-    }
-
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
         const selectedNode = selectedNodes[0];
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
-            const connectedEdges = network.getConnectedEdges(selectedNode);
-            const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
             const newNodeId = getNextNodeId();
             nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
-            if (parentEdge) {
-                edges.add({ from: parentEdge.from, to: newNodeId });
-            } else {
-                edges.add({ from: selectedNode, to: newNodeId });
-            }
-            setTimeout(applyCustomLayout, 100);
+            edges.add({ from: selectedNode, to: newNodeId });
+            applyCustomLayout();
         } else if (event.key === 'Tab') {
             event.preventDefault();
             const newNodeId = getNextNodeId();
             nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
             edges.add({ from: selectedNode, to: newNodeId });
-            setTimeout(applyCustomLayout, 100);
+            applyCustomLayout();
         } else if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault();
             deleteNodeAndDescendants(selectedNode);
-            setTimeout(applyCustomLayout, 100);
+            applyCustomLayout();
         }
     }
 });
@@ -295,11 +288,11 @@ network.on("dragEnd", function (params) {
 });
 
 // 当节点或边数据变化时，重新布局
-nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
+nodes.on(['add', 'remove', 'update'], function () {
     applyCustomLayout();
 });
 
-edges.on(['add', 'remove', 'update'], function (event, properties, senderId) {
+edges.on(['add', 'remove', 'update'], function () {
     applyCustomLayout();
 });
 
@@ -325,7 +318,9 @@ function applyCustomLayout() {
     });
 
     nodes.forEach(node => {
-        nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
+        if (tree[node.id]) {
+            nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
+        }
     });
 
     network.fit();
@@ -390,5 +385,48 @@ function getDescendants(nodeId) {
     return descendants;
 }
 
+// 检查是否会形成环路
+function willFormCycle(fromId, toId) {
+    const visited = new Set();
+
+    function dfs(currentId) {
+        if (currentId === fromId) return true;
+        if (visited.has(currentId)) return false;
+
+        visited.add(currentId);
+        const childEdges = edges.get().filter(edge => edge.from === currentId);
+        for (let edge of childEdges) {
+            if (dfs(edge.to)) return true;
+        }
+        return false;
+    }
+
+    return dfs(toId);
+}
+
 // 初始布局
 applyCustomLayout();
+
+// --------------------- 新增的键盘事件监听（处理回车和 Ctrl+回车） ---------------------
+
+// 处理 textarea 的键盘事件
+elements.userInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        if (event.ctrlKey) {
+            // 按下 Ctrl + Enter 插入换行
+            const { selectionStart, selectionEnd, value } = elements.userInput;
+            elements.userInput.value = value.substring(0, selectionStart) + "\n" + value.substring(selectionEnd);
+            elements.userInput.selectionStart = elements.userInput.selectionEnd = selectionStart + 1;
+            event.preventDefault();
+        } else {
+            // 按下 Enter 发送消息
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+});
+
+// 防止表单提交（如果有包裹在表单内）
+document.querySelector('form')?.addEventListener('submit', function(event) {
+    event.preventDefault();
+});
