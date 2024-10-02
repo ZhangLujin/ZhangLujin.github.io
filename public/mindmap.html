@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>思维导图</title>
+  <link rel="stylesheet" href="./styles.css">
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
     body, html {
@@ -158,6 +159,8 @@
 
   // 添加重新调整视图的功能
   const overviewButton = document.getElementById('overview-button');
+  const network = new vis.Network(container, data, options);
+
   overviewButton.addEventListener('click', () => {
     network.fit({
       animation: {
@@ -167,7 +170,6 @@
     });
   });
 
-  const network = new vis.Network(container, data, options);
   let isEditingNode = false;
 
   // 双击节点编辑
@@ -365,23 +367,6 @@
 
   // 窗口大小改变时重新布局
   window.addEventListener('resize', applyCustomLayout);
-
-  // 接收父页面传递的状态数据
-  window.addEventListener('message', function(event) {
-    const data = event.data;
-    if (data.type === 'updateState') {
-      const state = data.state;
-      // 这里可以根据接收到的状态数据来更新思维导图
-      console.log('Received state from parent:', state);
-      if (state.reset) {
-        // 重置思维导图
-        nodes.clear();
-        edges.clear();
-        nodes.add({ id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } });
-        applyCustomLayout();
-      }
-    }
-  });
 </script>
 </body>
 

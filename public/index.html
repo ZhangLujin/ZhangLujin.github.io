@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>小学生AI写作助手</title>
+  <!-- 引入样式文件 -->
   <link rel="stylesheet" href="./styles.css">
+  <!-- 引入 Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 GSAP 动画库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
 </head>
+
 <body class="bg-gradient-to-br from-blue-100 to-purple-100">
 <header class="bg-white py-4 shadow-lg">
   <div class="container flex justify-between items-center">
@@ -43,6 +48,7 @@
     </div>
   </div>
   <div class="w-1/2 pl-4">
+    <!-- 思维导图容器 -->
     <iframe src="mindmap.html" width="100%" height="600px" frameborder="0"></iframe>
   </div>
 </main>
@@ -52,10 +58,10 @@
     <div class="search-container flex-grow mr-4">
       <input type="text" placeholder="搜索写作技巧..." class="text-lg">
       <span class="search-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-        </svg>
-      </span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+          </svg>
+        </span>
     </div>
     <button class="btn btn-accent mr-4">好词好句</button>
     <button class="btn btn-accent">范文/素材</button>
@@ -82,6 +88,8 @@
   </svg>
 </div>
 
+<!-- 引入聊天功能脚本 -->
 <script src="./script.js"></script>
 </body>
+
 </html>

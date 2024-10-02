@@ -1,3 +1,5 @@
+// script.js
+
 // 动画效果
 gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
 gsap.from("nav", { opacity: 0, y: -10, duration: 0.6, delay: 0.2, ease: "power3.out" });
@@ -109,9 +111,6 @@ function updateUI(step, structure) {
 
     document.querySelector('h1').textContent = step >= structure.length ? 'AI 作文答疑系统' : 'AI 作文引导系统';
     elements.userInput.placeholder = step >= structure.length ? '在这里输入你的问题...' : '在这里输入你的回答...';
-
-    // 将当前进度发送给思维导图
-    sendStateToMindmap(currentState);
 }
 
 // 更新阶段选择下拉框
@@ -143,8 +142,6 @@ elements.restartBtn.addEventListener('click', () => {
     elements.chatBox.innerHTML = '';
     elements.stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
     sendMessage('');
-    // 通知思维导图重置
-    sendStateToMindmap({ reset: true });
 });
 elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
@@ -172,7 +169,7 @@ elements.jumpStageBtn.addEventListener('click', () => {
 });
 
 // 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-elements.userInput.addEventListener('keydown', function(e) {
+elements.userInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
         if (e.ctrlKey) {
             let start = this.selectionStart;
@@ -196,21 +193,6 @@ sidebarToggle.addEventListener('click', () => {
 });
 
 // 语音输入功能（示例）
-document.getElementById('voiceInputBtn').addEventListener('click', function() {
+document.getElementById('voiceInputBtn').addEventListener('click', function () {
     alert('语音输入功能尚未实现');
-});
-
-// 向思维导图发送数据的功能
-function sendStateToMindmap(state) {
-    const mindmapIframe = document.getElementById('mindmap-iframe');
-    mindmapIframe.contentWindow.postMessage({ type: 'updateState', state: state }, '*');
-}
-
-// 接收思维导图的消息（如果需要）
-window.addEventListener('message', function(event) {
-    const data = event.data;
-    if (data.type === 'mindmapUpdated') {
-        // 如果需要处理思维导图更新后的数据，可以在这里处理
-        console.log('Received updated mindmap data:', data);
-    }
 });
