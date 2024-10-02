@@ -28,7 +28,6 @@ function disableUserInput() {
     elements.userInput.disabled = true;
     elements.sendTextBtn.disabled = true;
     elements.nextStageBtn.disabled = true;
-    elements.voiceInputBtn && (elements.voiceInputBtn.disabled = true);
 }
 
 // 启用用户输入
@@ -36,54 +35,36 @@ function enableUserInput() {
     elements.userInput.disabled = false;
     elements.sendTextBtn.disabled = false;
     elements.nextStageBtn.disabled = false;
-    elements.voiceInputBtn && (elements.voiceInputBtn.disabled = false);
 }
 
-// 发送消息函数
-function sendMessage(message = '', nextStep = false, jumpToStep = null) {
+// 发送消息
+function sendMessage(message = '', nextStep = false) {
     if (!message) {
         message = elements.userInput.value;
     }
-    if (!message.trim() && state.currentStep !== 0 && !nextStep && jumpToStep === null) return;
+    if (!message.trim() && state.currentStep !== 0 && !nextStep) return;
 
     disableUserInput();
 
-    if (message.trim() && !nextStep && jumpToStep === null) {
+    if (message.trim() && !nextStep) {
         elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
     }
-
     elements.userInput.value = '';
 
-    // 构建请求体
-    const bodyData = {
-        message: message.trim(),
-        state: state
-    };
-
-    if (nextStep) {
-        bodyData.force_next_step = true;
-    }
-
-    if (jumpToStep !== null) {
-        bodyData.jump_to_step = parseInt(jumpToStep, 10);
-    }
+    const bodyData = nextStep ? { state, force_next_step: true } : { message, state };
 
     fetch('/api/chat', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData)
     })
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.error);
-
             if (data.response) {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
                 elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
             }
-
             state.currentStep = data.state.current_step;
             updateUI(state.currentStep, data.structure);
             enableUserInput();
@@ -95,7 +76,7 @@ function sendMessage(message = '', nextStep = false, jumpToStep = null) {
         });
 }
 
-// 更新界面函数
+// 更新界面
 function updateUI(step, structure) {
     elements.structureContainer.innerHTML = '';
     structure.forEach((stage, index) => {
@@ -111,19 +92,11 @@ function updateUI(step, structure) {
             elements.structureContainer.appendChild(arrow);
         }
 
-        if (index <= state.maxCompletedStep) {
-            updateStageSelect(index, stage.step);
-        }
+        if (index <= state.maxCompletedStep) updateStageSelect(index, stage.step);
     });
 
-    // 更新标题和输入框占位符
-    if (step >= structure.length) {
-        document.querySelector('h1').textContent = 'AI 作文答疑系统';
-        elements.userInput.placeholder = '在这里输入你的问题...';
-    } else {
-        document.querySelector('h1').textContent = 'AI 作文引导系统';
-        elements.userInput.placeholder = '在这里输入你的回答...';
-    }
+    document.querySelector('h1').textContent = step >= structure.length ? 'AI 作文答疑系统' : 'AI 作文引导系统';
+    elements.userInput.placeholder = step >= structure.length ? '在这里输入你的问题...' : '在这里输入你的回答...';
 }
 
 // 更新阶段选择下拉框
@@ -131,7 +104,7 @@ function updateStageSelect(completedStep, stepLabel) {
     const options = elements.stageSelect.options;
     if (!Array.from(options).some(option => option.value === String(completedStep))) {
         const option = document.createElement('option');
-        option.value = completedStep; // 使用步骤索引
+        option.value = completedStep;
         option.text = `返回 ${stepLabel} 阶段`;
         elements.stageSelect.appendChild(option);
     }
@@ -143,14 +116,10 @@ window.addEventListener('load', () => sendMessage(''));
 // 按钮事件监听
 elements.sendTextBtn.addEventListener('click', () => sendMessage());
 elements.nextStageBtn.addEventListener('click', () => sendMessage("我觉得我的答案已经足够了，我们可以继续下一步吗？", true));
-elements.restartBtn.addEventListener('click', () => {
-    location.reload();
-});
+elements.restartBtn.addEventListener('click', () => { location.reload(); });
 elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
-    if (selectedStep !== "") {
-        sendMessage('', false, selectedStep);
-    }
+    if (selectedStep !== "") sendMessage('', false);
 });
 
 // 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
@@ -175,11 +144,13 @@ elements.userInput.addEventListener('keydown', function(event) {
 // 侧边栏切换功能
 const sidebar = document.querySelector('.sidebar');
 const sidebarToggle = document.querySelector('.sidebar-toggle');
+
 sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('open');
 });
 
 // 思维导图功能
+
 // 初始化节点和边
 const nodes = new vis.DataSet([
     { id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } }
@@ -189,7 +160,9 @@ const edges = new vis.DataSet([]);
 const container = document.getElementById('mindmap');
 const data = { nodes, edges };
 const options = {
-    layout: { hierarchical: false },
+    layout: {
+        hierarchical: false
+    },
     nodes: {
         shape: 'box',
         widthConstraint: { minimum: 100, maximum: 200 },
@@ -216,10 +189,13 @@ const options = {
         hideEdgesOnDrag: false,
         hideNodesOnDrag: false
     },
-    manipulation: { enabled: false }
+    manipulation: {
+        enabled: false // 禁用默认的操作按钮
+    }
 };
 
 const network = new vis.Network(container, data, options);
+
 let isEditingNode = false;
 
 // 双击节点编辑
@@ -244,6 +220,7 @@ network.on('doubleClick', function (params) {
         document.body.appendChild(input);
         input.focus();
         input.select();
+
         input.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -255,6 +232,7 @@ network.on('doubleClick', function (params) {
                 isEditingNode = false;
             }
         });
+
         input.addEventListener('blur', () => {
             const newLabel = input.value.trim();
             if (newLabel !== '') {
@@ -320,6 +298,7 @@ network.on("dragEnd", function (params) {
 nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     applyCustomLayout();
 });
+
 edges.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     applyCustomLayout();
 });
@@ -334,17 +313,21 @@ function getNextNodeId() {
 function applyCustomLayout() {
     const tree = buildTree();
     const roots = findRoots(tree);
+
     const levelSeparation = 150;
     const nodeSpacing = 220;
     const startX = container.clientWidth / 2;
     const startY = 50;
+
     let currentX = startX;
     roots.forEach(root => {
         currentX = layoutNode(root, 0, currentX, levelSeparation, nodeSpacing);
     });
+
     nodes.forEach(node => {
         nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
     });
+
     network.fit();
 }
 
@@ -364,7 +347,9 @@ function buildTree() {
 
 // 查找根节点
 function findRoots(tree) {
-    return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
+    return Object.values(tree).filter(node =>
+        !edges.get().some(edge => edge.to === node.id)
+    );
 }
 
 // 布局节点
@@ -389,7 +374,9 @@ function layoutNode(node, depth, xOffset, levelSeparation, nodeSpacing) {
 function deleteNodeAndDescendants(nodeId) {
     const descendants = getDescendants(nodeId);
     nodes.remove([nodeId, ...descendants]);
-    edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
+    edges.remove(edges.get().filter(edge =>
+        edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)
+    ));
 }
 
 // 获取子孙节点
