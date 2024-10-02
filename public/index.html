@@ -108,6 +108,7 @@
   </svg>
 </div>
 
+<!-- 引入脚本文件 -->
 <script>
   // 动画效果
   gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
@@ -127,8 +128,7 @@
     stageSelect: document.getElementById('stage-select'),
     jumpStageBtn: document.getElementById('jumpStageBtn'),
     nextStageBtn: document.getElementById('nextStageBtn'),
-    structureContainer: document.getElementById('dynamic-structure'),
-    chatContainer: document.querySelector('.chat-container')
+    structureContainer: document.getElementById('dynamic-structure')
   };
 
   // 禁用用户输入
@@ -145,13 +145,6 @@
     elements.nextStageBtn.disabled = false;
   }
 
-  // 滚动聊天框到底部
-  function scrollChatToBottom() {
-    requestAnimationFrame(() => {
-      elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
-    });
-  }
-
   // 发送消息
   function sendMessage(message = '', nextStep = false) {
     if (!message) {
@@ -163,7 +156,6 @@
 
     if (message.trim() && !nextStep) {
       elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
-      scrollChatToBottom();
     }
     elements.userInput.value = '';
 
@@ -195,6 +187,11 @@
               scrollChatToBottom();
               enableUserInput();
             });
+  }
+
+  // 滚动聊天框到底部
+  function scrollChatToBottom() {
+    elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
   }
 
   // 更新界面
