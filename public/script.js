@@ -122,17 +122,22 @@ elements.jumpStageBtn.addEventListener('click', () => {
     if (selectedStep !== "") sendMessage('', false);
 });
 
-// 处理按键事件：Enter 发送，Ctrl+Enter 换行
-elements.userInput.addEventListener('keydown', function (event) {
-    if (event.key === 'Enter' && !event.ctrlKey) {
-        event.preventDefault();
-        sendMessage();
-    } else if (event.key === 'Enter' && event.ctrlKey) {
-        // 插入换行
-        const cursorPosition = this.selectionStart;
-        const text = this.value;
-        this.value = text.slice(0, cursorPosition) + "\n" + text.slice(cursorPosition);
-        this.selectionStart = this.selectionEnd = cursorPosition + 1;
+// 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
+elements.userInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        if (event.ctrlKey) {
+            // Ctrl+Enter: send message
+            event.preventDefault();
+            sendMessage();
+        } else if (!event.shiftKey) {
+            // Enter without Shift or Ctrl: insert newline
+            event.preventDefault();
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            const value = this.value;
+            this.value = value.substring(0, start) + '\n' + value.substring(end);
+            this.selectionStart = this.selectionEnd = start + 1;
+        }
     }
 });
 
@@ -202,8 +207,8 @@ network.on('doubleClick', function (params) {
         const input = document.createElement('textarea');
         input.value = node.label;
         input.style.position = 'absolute';
-        input.style.left = params.event.pointer.DOM.x + 'px';
-        input.style.top = params.event.pointer.DOM.y + 'px';
+        input.style.left = params.event.pageX + 'px';
+        input.style.top = params.event.pageY + 'px';
         input.style.zIndex = 1000;
         input.style.width = '200px';
         input.style.height = '50px';
@@ -217,7 +222,7 @@ network.on('doubleClick', function (params) {
         input.select();
 
         input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
+            if (event.key === 'Enter') {
                 event.preventDefault();
                 const newLabel = input.value.trim();
                 if (newLabel !== '') {
@@ -243,13 +248,14 @@ network.on('doubleClick', function (params) {
 
 // 键盘事件处理
 document.addEventListener('keydown', function (event) {
-    // 排除在编辑节点时触发
-    if (isEditingNode) return;
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        return; // 输入框或文本区域聚焦时不处理
+    }
 
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
         const selectedNode = selectedNodes[0];
-        if (event.key === 'Enter' && !event.ctrlKey) {
+        if (event.key === 'Enter') {
             event.preventDefault();
             const connectedEdges = network.getConnectedEdges(selectedNode);
             const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
@@ -268,7 +274,6 @@ document.addEventListener('keydown', function (event) {
             edges.add({ from: selectedNode, to: newNodeId });
             setTimeout(applyCustomLayout, 100);
         } else if (event.key === 'Backspace' || event.key === 'Delete') {
-            event.preventDefault();
             deleteNodeAndDescendants(selectedNode);
             setTimeout(applyCustomLayout, 100);
         }
@@ -383,25 +388,6 @@ function getDescendants(nodeId) {
         descendants.push(...getDescendants(edge.to));
     });
     return descendants;
-}
-
-// 检查是否会形成环路
-function willFormCycle(fromId, toId) {
-    const visited = new Set();
-
-    function dfs(currentId) {
-        if (currentId === fromId) return true;
-        if (visited.has(currentId)) return false;
-
-        visited.add(currentId);
-        const childEdges = edges.get().filter(edge => edge.from === currentId);
-        for (let edge of childEdges) {
-            if (dfs(edge.to)) return true;
-        }
-        return false;
-    }
-
-    return dfs(toId);
 }
 
 // 初始布局
