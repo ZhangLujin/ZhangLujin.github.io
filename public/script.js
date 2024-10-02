@@ -77,6 +77,14 @@ function sendMessage(message = '', nextStep = false) {
             currentState = data.state;
             updateUI(currentState.current_step, data.structure);
             enableUserInput();
+
+            // 检查是否需要自动显示下一阶段的内容
+            if (data.display_text) {
+                setTimeout(() => {
+                    elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
+                    scrollChatToBottom();
+                }, 500);
+            }
         })
         .catch(error => {
             console.error('Error:', error);
@@ -129,21 +137,18 @@ window.addEventListener('load', () => sendMessage(''));
 
 // 按钮事件监听
 elements.sendTextBtn.addEventListener('click', () => sendMessage());
-
 elements.nextStageBtn.addEventListener('click', () => {
     const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
     elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
     scrollChatToBottom();
     sendMessage(presetUserMessage, true);
 });
-
 elements.restartBtn.addEventListener('click', () => {
     currentState = { current_step: 0, conversation: [], max_completed_step: 0 };
     elements.chatBox.innerHTML = '';
     elements.stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
     sendMessage('');
 });
-
 elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
     if (selectedStep !== "") {
@@ -160,6 +165,14 @@ elements.jumpStageBtn.addEventListener('click', () => {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
                 scrollChatToBottom();
                 updateUI(currentState.current_step, data.structure);
+
+                // 显示跳转后的阶段内容
+                if (data.display_text) {
+                    setTimeout(() => {
+                        elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
+                        scrollChatToBottom();
+                    }, 500);
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -170,7 +183,7 @@ elements.jumpStageBtn.addEventListener('click', () => {
 });
 
 // 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-elements.userInput.addEventListener('keydown', function (e) {
+elements.userInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         if (e.ctrlKey) {
             let start = this.selectionStart;
@@ -194,6 +207,6 @@ sidebarToggle.addEventListener('click', () => {
 });
 
 // 语音输入功能（示例）
-document.getElementById('voiceInputBtn').addEventListener('click', function () {
+document.getElementById('voiceInputBtn').addEventListener('click', function() {
     alert('语音输入功能尚未实现');
 });
