@@ -3,169 +3,295 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>小学生AI写作助手</title>
-  <!-- 引入样式文件 -->
-  <link rel="stylesheet" href="./styles.css">
-  <!-- 引入 Tailwind CSS -->
+  <title>AI 结构化对话界面</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 GSAP 动画库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
-  <!-- 引入 Vis.js 网络库（用于思维导图） -->
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+    :root {
+      --primary-color: #3b82f6;
+      --secondary-color: #f3f4f6;
+      --text-color: #374151;
+      --border-color: #e5e7eb;
+      --accent-color: #10b981;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #ffffff;
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      width: 100%;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .ai-logo {
+      width: 40px;
+      height: 40px;
+      background-color: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .nav-item {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 8px;
+    }
+
+    .nav-item:hover {
+      background-color: var(--secondary-color);
+      color: var(--primary-color);
+    }
+
+    .chat-container {
+      height: calc(100% - 80px);
+      overflow-y: auto;
+    }
+
+    .structure-container {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #2563eb;
+    }
+
+    .btn-accent {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background-color: #059669;
+    }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      background-color: var(--secondary-color);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .search-container input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    .search-icon {
+      color: var(--text-color);
+    }
+
+    .structure-item {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      text-align: center;
+      transition: all 0.3s ease;
+      background-color: white;
+    }
+
+    .structure-arrow {
+      width: 1px;
+      height: 20px;
+      background-color: var(--border-color);
+      margin: 0 auto;
+    }
+
+    .input-area {
+      resize: none;
+      width: 100%;
+      height: 80px;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--secondary-color);
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .input-area:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    .chat-message {
+      background-color: var(--secondary-color);
+      border-radius: 12px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .user-message {
+      background-color: #e0f2fe;
+      margin-left: 10%;
+    }
+
+    .ai-message {
+      background-color: #f0fdf4;
+      margin-right: 10%;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-100 to-purple-100">
-<header class="bg-white py-4 shadow-lg">
+<body>
+<header class="bg-white py-3 shadow-sm">
   <div class="container flex justify-between items-center">
     <div class="flex items-center">
-      <div class="ai-logo mr-4 float-animation">AI</div>
-      <h1 class="text-3xl font-bold text-primary-color">小学生AI写作助手</h1>
+      <div class="ai-logo mr-3">AI</div>
+      <h1 class="text-xl font-semibold">AI 作文引导系统</h1>
     </div>
-    <button class="btn btn-primary" id="restartBtn">重新开始</button>
+    <button class="btn btn-primary" id="restartBtn">
+      重新开始
+    </button>
   </div>
 </header>
 
-<nav class="bg-white shadow-md mt-4">
+<nav class="bg-white shadow-sm">
   <div class="container flex justify-between py-2">
     <div class="nav-item">写作引导</div>
-    <div class="nav-item">文章结构</div>
-    <div class="nav-item">作文答疑</div>
-    <div class="nav-item">写作反馈</div>
+    <div class="nav-item">结构</div>
+    <div class="nav-item">答疑</div>
+    <div class="nav-item">反馈</div>
   </div>
 </nav>
 
-<main class="flex-grow flex container overflow-hidden mt-6">
+<main class="flex-grow flex container overflow-hidden">
   <div class="w-1/2 pr-4 flex flex-col h-full">
-    <div class="chat-container card p-6 flex-grow overflow-y-auto">
+    <div class="chat-container card p-4 flex-grow overflow-y-auto">
       <div id="chat-box"></div>
     </div>
     <div class="mt-4">
-      <textarea class="input-area" id="user-input" placeholder="在这里输入你的想法..."></textarea>
-      <div class="flex justify-between mt-4 items-center">
-        <button class="btn btn-accent flex-grow mr-2" id="voiceInputBtn">语音输入</button>
-        <button class="btn btn-primary flex-grow ml-2" id="sendTextBtn">发送</button>
-        <button class="btn btn-next ml-2" id="nextStageBtn">下一步</button>
+      <textarea class="input-area" id="user-input" placeholder="在这里输入你的回答..."></textarea>
+      <div class="flex justify-between mt-2">
+        <button class="btn btn-accent" id="voiceInputBtn">语音输入</button>
+        <button class="btn btn-primary" id="sendTextBtn">发送</button>
+        <button class="btn btn-primary" id="nextStageBtn">跳到下一步</button> <!-- 添加的按钮 -->
       </div>
     </div>
   </div>
   <div class="w-1/2 pl-4">
-    <!-- 操作指引 -->
-    <div class="operation-instructions">
-      <div class="instruction-item">
-        <div class="instruction-icon add-node-icon">+</div>
-        <span>回车: 添加节点</span>
+    <div class="structure-container card p-4">
+      <h2 class="text-lg font-semibold mb-4">作文结构</h2>
+      <div class="mb-4">
+        <label for="stage-select" class="block text-sm font-medium text-gray-700">选择返回的阶段：</label>
+        <select id="stage-select" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+          <option value="">选择你要跳转的阶段</option>
+        </select>
+        <button class="btn btn-accent mt-2" id="jumpStageBtn">跳转阶段</button>
       </div>
-      <div class="instruction-item">
-        <div class="instruction-icon add-child-icon">⇥</div>
-        <span>Tab: 添加子节点</span>
-        <span>Enter: 添加同级节点</span>
-      </div>
-      <div class="instruction-item">
-        <div class="instruction-icon edit-node-icon">✎</div>
-        <span>双击左键: 编辑节点</span>
-      </div>
-      <div class="instruction-item">
-        <div class="instruction-icon delete-node-icon">✖</div>
-        <span>Delete: 删除节点</span>
-      </div>
+      <div class="structure-item">主题</div>
+      <div class="structure-arrow"></div>
+      <div class="structure-item">开头</div>
+      <div class="structure-arrow"></div>
+      <div class="structure-item">主体</div>
+      <div class="structure-arrow"></div>
+      <div class="structure-item">结尾</div>
+      <div class="structure-arrow"></div>
+      <div class="structure-item">标题</div>
     </div>
-    <!-- 思维导图容器 -->
-    <div id="mindmap"></div>
   </div>
 </main>
 
-<footer class="bg-white shadow-lg mt-6">
-  <div class="container py-4 flex justify-between items-center">
+<footer class="bg-white shadow-sm">
+  <div class="container py-3 flex justify-between items-center">
     <div class="search-container flex-grow mr-4">
-      <input type="text" placeholder="搜索写作技巧..." class="text-lg">
+      <input type="text" placeholder="搜索写作技巧...">
       <span class="search-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
         </svg>
       </span>
     </div>
-    <button class="btn btn-accent mr-4">好词好句</button>
+    <button class="btn btn-accent mr-2">好词好句</button>
     <button class="btn btn-accent">范文/素材</button>
   </div>
 </footer>
 
-<!-- 侧边栏（作文步骤） -->
-<div class="sidebar">
-  <h2 class="text-2xl font-bold mb-6 text-center text-secondary-color p-4">作文步骤</h2>
-  <div class="mb-6 px-4">
-    <label for="stage-select" class="block text-lg font-medium text-gray-700 mb-2">选择返回的阶段：</label>
-    <select id="stage-select" class="w-full py-3 px-4 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-color focus:border-primary-color text-lg">
-      <option value="">选择你要跳转的阶段</option>
-    </select>
-    <button class="btn btn-accent mt-4 w-full" id="jumpStageBtn">跳转阶段</button>
-  </div>
-  <div id="dynamic-structure" class="px-4"></div>
-</div>
-
-<!-- 侧边栏切换按钮 -->
-<div class="sidebar-toggle">
-  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" stroke="currentColor" fill="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-</div>
-
-<!-- 引入脚本文件 -->
 <script>
-  // 动画效果
   gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
   gsap.from("nav", { opacity: 0, y: -10, duration: 0.6, delay: 0.2, ease: "power3.out" });
   gsap.from("main", { opacity: 0, y: 20, duration: 0.6, delay: 0.4, ease: "power3.out" });
   gsap.from("footer", { opacity: 0, y: 20, duration: 0.6, delay: 0.6, ease: "power3.out" });
 
-  // 全局状态
-  const state = {
-    currentStep: 0,
-    conversation: [],
-    maxCompletedStep: 0
-  };
+  let currentState = { current_step: 0, conversation: [] };
+  const userInput = document.getElementById('user-input');
+  const sendTextBtn = document.getElementById('sendTextBtn');
+  const chatBox = document.getElementById('chat-box');
+  const restartBtn = document.getElementById('restartBtn');
+  const stageSelect = document.getElementById('stage-select');
+  const jumpStageBtn = document.getElementById('jumpStageBtn');
+  const nextStageBtn = document.getElementById('nextStageBtn');
 
-  // 获取元素
-  const elements = {
-    userInput: document.getElementById('user-input'),
-    sendTextBtn: document.getElementById('sendTextBtn'),
-    chatBox: document.getElementById('chat-box'),
-    restartBtn: document.getElementById('restartBtn'),
-    stageSelect: document.getElementById('stage-select'),
-    jumpStageBtn: document.getElementById('jumpStageBtn'),
-    nextStageBtn: document.getElementById('nextStageBtn'),
-    structureContainer: document.getElementById('dynamic-structure')
-  };
-
-  // 禁用用户输入
   function disableUserInput() {
-    elements.userInput.disabled = true;
-    elements.sendTextBtn.disabled = true;
-    elements.nextStageBtn.disabled = true;
+    userInput.disabled = true;
+    sendTextBtn.disabled = true;
+    nextStageBtn.disabled = true;
   }
 
-  // 启用用户输入
   function enableUserInput() {
-    elements.userInput.disabled = false;
-    elements.sendTextBtn.disabled = false;
-    elements.nextStageBtn.disabled = false;
+    userInput.disabled = false;
+    sendTextBtn.disabled = false;
+    nextStageBtn.disabled = false;
   }
 
-  // 发送消息
   function sendMessage(message = '', nextStep = false) {
     if (!message) {
-      message = elements.userInput.value;
+      message = userInput.value;
     }
-    if (!message.trim() && state.currentStep !== 0 && !nextStep) return;
+    if (!message.trim() && currentState.current_step !== 0 && !nextStep) return;
 
     disableUserInput();
 
     if (message.trim() && !nextStep) {
-      elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
+      chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${message}</div>`;
     }
-    elements.userInput.value = '';
+    userInput.value = '';
 
     const bodyData = nextStep
-            ? { state, force_next_step: true }
-            : { message, state };
+            ? { state: currentState, force_next_step: true }
+            : { message: message, state: currentState };
 
     fetch('/api/chat', {
       method: 'POST',
@@ -176,335 +302,138 @@
     })
             .then(response => response.json())
             .then(data => {
-              if (data.error) throw new Error(data.error);
-              if (data.response) {
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
+              if (data.error) {
+                throw new Error(data.error);
               }
-              state.currentStep = data.state.current_step;
-              state.maxCompletedStep = Math.max(state.maxCompletedStep, state.currentStep);
-              updateUI(state.currentStep, data.structure);
+              if (data.response) {
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+              }
+
+              currentState = data.state;
+              updateUI(currentState.current_step);
+
               enableUserInput();
             })
             .catch(error => {
               console.error('Error:', error);
-              elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
+              chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
               enableUserInput();
             });
   }
 
-  // 更新界面
-  function updateUI(step, structure) {
-    elements.structureContainer.innerHTML = '';
-    structure.forEach((stage, index) => {
-      const stepItem = document.createElement('div');
-      stepItem.classList.add('structure-item');
-      stepItem.textContent = `步骤 ${index + 1}: ${stage.step}`;
-      stepItem.style.backgroundColor = index <= step ? '#d1fae5' : 'white';
-      elements.structureContainer.appendChild(stepItem);
-
-      if (index < structure.length - 1) {
-        const arrow = document.createElement('div');
-        arrow.classList.add('structure-arrow');
-        elements.structureContainer.appendChild(arrow);
+  function updateUI(step) {
+    const structureItems = document.querySelectorAll('.structure-item');
+    const steps = ['主题', '开头', '主体', '结尾', '标题'];
+    structureItems.forEach((item, index) => {
+      if (index < step) {
+        item.style.backgroundColor = '#d1fae5'; // 完成的步骤
+        updateStageSelect(index);  // 更新下拉菜单
+      } else if (index === step) {
+        item.style.backgroundColor = '#fef3c7'; // 当前步骤
+      } else {
+        item.style.backgroundColor = 'white'; // 未完成的步骤
       }
-
-      if (index <= state.maxCompletedStep) updateStageSelect(index, stage.step);
     });
 
-    document.querySelector('h1').textContent = step >= structure.length ? 'AI 作文答疑系统' : 'AI 作文引导系统';
-    elements.userInput.placeholder = step >= structure.length ? '在这里输入你的问题...' : '在这里输入你的回答...';
+    if (step >= steps.length) {
+      document.querySelector('h1').textContent = 'AI 作文答疑系统';
+      userInput.placeholder = '在这里输入你的问题...';
+    } else {
+      document.querySelector('h1').textContent = 'AI 作文引导系统';
+      userInput.placeholder = '在这里输入你的回答...';
+    }
   }
 
-  // 更新阶段选择下拉框
-  function updateStageSelect(completedStep, stepLabel) {
-    const options = elements.stageSelect.options;
-    if (!Array.from(options).some(option => option.value === String(completedStep))) {
+  function updateStageSelect(completedStep) {
+    const options = stageSelect.options;
+    const existingOptions = Array.from(options).map(option => option.value);
+    const steps = ['主题', '开头', '主体', '结尾', '标题'];
+    const stepLabel = steps[completedStep];
+
+    if (!existingOptions.includes(String(completedStep))) {
       const option = document.createElement('option');
       option.value = completedStep;
       option.text = `返回 ${stepLabel} 阶段`;
-      elements.stageSelect.appendChild(option);
+      stageSelect.appendChild(option);
     }
   }
 
-  // 页面加载时发送初始消息
-  window.addEventListener('load', () => sendMessage(''));
-
-  // 按钮事件监听
-  elements.sendTextBtn.addEventListener('click', () => sendMessage());
-  elements.nextStageBtn.addEventListener('click', () => {
-    const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
-    elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
-    sendMessage(presetUserMessage, true);
-  });
-  elements.restartBtn.addEventListener('click', () => {
-    state.currentStep = 0;
-    state.conversation = [];
-    state.maxCompletedStep = 0;
-    elements.chatBox.innerHTML = '';
-    elements.stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
+  window.addEventListener('load', function() {
     sendMessage('');
   });
-  elements.jumpStageBtn.addEventListener('click', () => {
-    const selectedStep = elements.stageSelect.value;
-    if (selectedStep !== "") sendMessage('', false);
+
+  sendTextBtn.addEventListener('click', function() {
+    sendMessage();
   });
 
-  // 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-  elements.userInput.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-      if (event.ctrlKey) {
-        // Ctrl+Enter: send message
-        event.preventDefault();
-        sendMessage();
-      } else if (!event.shiftKey) {
-        // Enter without Shift or Ctrl: insert newline
-        event.preventDefault();
-        const start = this.selectionStart;
-        const end = this.selectionEnd;
-        const value = this.value;
-        this.value = value.substring(0, start) + '\n' + value.substring(end);
+  nextStageBtn.addEventListener('click', function() {
+    // 检查当前对话记录中是否有用户在当前步骤的作答
+    const userHasAnswered = currentState.conversation.some(
+            (msg) => msg.role === 'user' && msg.content.trim() !== ''
+    );
+
+    if (userHasAnswered) {
+      // 如果用户已经作答，强制跳转到下一步
+      sendMessage('', true);
+    } else {
+      // 如果没有作答，在聊天窗口显示提示信息
+      chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> 请先在当前阶段作答，然后再跳转到下一步。</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight; // 自动滚动到底部
+    }
+  });
+
+
+  restartBtn.addEventListener('click', function() {
+    currentState = { current_step: 0, conversation: [] };
+    chatBox.innerHTML = '';
+    stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
+    sendMessage('');
+  });
+
+  jumpStageBtn.addEventListener('click', function() {
+    const selectedStep = stageSelect.value;
+    if (selectedStep !== "") {
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ state: currentState, jump_to_step: parseInt(selectedStep) })
+      })
+              .then(response => response.json())
+              .then(data => {
+                currentState = data.state;
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                updateUI(currentState.current_step);
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '跳转阶段时发生了一个错误。'}</div>`;
+              });
+    }
+  });
+
+  userInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      if (e.ctrlKey) {
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
+        let value = this.value;
+        this.value = value.slice(0, start) + "\n" + value.slice(end);
         this.selectionStart = this.selectionEnd = start + 1;
+        e.preventDefault();
+      } else {
+        e.preventDefault();
+        sendMessage();
       }
     }
   });
 
-  // 侧边栏切换功能
-  const sidebar = document.querySelector('.sidebar');
-  const sidebarToggle = document.querySelector('.sidebar-toggle');
-  sidebarToggle.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-  });
-
-  // 思维导图功能
-  // 初始化节点和边
-  const nodes = new vis.DataSet([
-    { id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } }
-  ]);
-  const edges = new vis.DataSet([]);
-  const container = document.getElementById('mindmap');
-  const data = { nodes, edges };
-  const options = {
-    layout: { hierarchical: false },
-    nodes: {
-      shape: 'box',
-      widthConstraint: { minimum: 100, maximum: 200 },
-      font: { size: 16, multi: true, face: 'Noto Sans SC' },
-      borderWidth: 2,
-      shadow: true,
-      fixed: { x: true, y: true }
-    },
-    edges: {
-      arrows: 'to',
-      width: 2,
-      smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 }
-    },
-    physics: { enabled: false },
-    interaction: {
-      dragNodes: true,
-      dragView: true,
-      zoomView: true,
-      hover: true,
-      selectable: true,
-      selectConnectedEdges: false,
-      multiselect: false,
-      tooltipDelay: 300,
-      hideEdgesOnDrag: false,
-      hideNodesOnDrag: false
-    },
-    manipulation: { enabled: false }
-  };
-  const network = new vis.Network(container, data, options);
-  let isEditingNode = false;
-
-  // 双击节点编辑
-  network.on('doubleClick', function (params) {
-    if (params.nodes.length === 1) {
-      isEditingNode = true;
-      const nodeId = params.nodes[0];
-      const node = nodes.get(nodeId);
-      const input = document.createElement('textarea');
-      input.value = node.label;
-      input.style.position = 'absolute';
-      input.style.left = params.event.pageX + 'px';
-      input.style.top = params.event.pageY + 'px';
-      input.style.zIndex = 1000;
-      input.style.width = '200px';
-      input.style.height = '50px';
-      input.style.fontSize = '16px';
-      input.style.border = '2px solid #ccc';
-      input.style.borderRadius = '8px';
-      input.style.padding = '10px';
-      input.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
-      document.body.appendChild(input);
-      input.focus();
-      input.select();
-      input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          const newLabel = input.value.trim();
-          if (newLabel !== '') {
-            nodes.update({ id: nodeId, label: newLabel });
-          }
-          document.body.removeChild(input);
-          isEditingNode = false;
-        }
-      });
-      input.addEventListener('blur', () => {
-        const newLabel = input.value.trim();
-        if (newLabel !== '') {
-          nodes.update({ id: nodeId, label: newLabel });
-        }
-        if (document.body.contains(input)) {
-          document.body.removeChild(input);
-        }
-        isEditingNode = false;
-      });
-    }
-  });
-
-  // 键盘事件处理
-  document.addEventListener('keydown', function (event) {
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-      return; // 输入框或文本区域聚焦时不处理
-    }
-    const selectedNodes = network.getSelectedNodes();
-    if (selectedNodes.length === 1) {
-      const selectedNode = selectedNodes[0];
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const connectedEdges = network.getConnectedEdges(selectedNode);
-        const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
-        const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
-        if (parentEdge) {
-          edges.add({ from: parentEdge.from, to: newNodeId });
-        } else {
-          edges.add({ from: selectedNode, to: newNodeId });
-        }
-        setTimeout(applyCustomLayout, 100);
-      } else if (event.key === 'Tab') {
-        event.preventDefault();
-        const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
-        edges.add({ from: selectedNode, to: newNodeId });
-        setTimeout(applyCustomLayout, 100);
-      } else if (event.key === 'Backspace' || event.key === 'Delete') {
-        deleteNodeAndDescendants(selectedNode);
-        setTimeout(applyCustomLayout, 100);
-      }
-    }
-  });
-
-  // 拖动节点时禁用物理引擎
-  network.on("dragStart", function (params) {
-    if (params.nodes.length === 1) {
-      network.setOptions({ physics: false });
-    }
-  });
-
-  // 拖动结束后应用自定义布局
-  network.on("dragEnd", function (params) {
-    if (params.nodes.length === 1) {
-      applyCustomLayout();
-    }
-  });
-
-  // 当节点或边数据变化时，重新布局
-  nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
-    applyCustomLayout();
-  });
-
-  edges.on(['add', 'remove', 'update'], function (event, properties, senderId) {
-    applyCustomLayout();
-  });
-
-  // 获取下一个节点ID
-  function getNextNodeId() {
-    const existingIds = nodes.getIds();
-    return Math.max(...existingIds) + 1;
-  }
-
-  // 应用自定义布局
-  function applyCustomLayout() {
-    const tree = buildTree();
-    const roots = findRoots(tree);
-    const levelSeparation = 150;
-    const nodeSpacing = 220;
-    const startX = container.clientWidth / 2;
-    const startY = 50;
-    let currentX = startX;
-    roots.forEach(root => {
-      currentX = layoutNode(root, 0, currentX, levelSeparation, nodeSpacing);
-    });
-    nodes.forEach(node => {
-      nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
-    });
-    network.fit();
-  }
-
-  // 构建树形结构
-  function buildTree() {
-    const tree = {};
-    nodes.forEach(node => {
-      tree[node.id] = { ...node, children: [] };
-    });
-    edges.forEach(edge => {
-      if (tree[edge.from] && tree[edge.to]) {
-        tree[edge.from].children.push(tree[edge.to]);
-      }
-    });
-    return tree;
-  }
-
-  // 查找根节点
-  function findRoots(tree) {
-    return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
-  }
-
-  // 布局节点
-  function layoutNode(node, depth, xOffset, levelSeparation, nodeSpacing) {
-    node.y = depth * levelSeparation;
-    let numChildren = node.children.length;
-    if (numChildren === 0) {
-      node.x = xOffset;
-      return xOffset + nodeSpacing;
-    }
-    let currentX = xOffset;
-    node.children.forEach(child => {
-      currentX = layoutNode(child, depth + 1, currentX, levelSeparation, nodeSpacing);
-    });
-    const firstChild = node.children[0];
-    const lastChild = node.children[node.children.length - 1];
-    node.x = (firstChild.x + lastChild.x) / 2;
-    return currentX;
-  }
-
-  // 删除节点及其子节点
-  function deleteNodeAndDescendants(nodeId) {
-    const descendants = getDescendants(nodeId);
-    nodes.remove([nodeId, ...descendants]);
-    edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
-  }
-
-  // 获取子孙节点
-  function getDescendants(nodeId) {
-    const descendants = [];
-    const childEdges = edges.get().filter(edge => edge.from === nodeId);
-    childEdges.forEach(edge => {
-      descendants.push(edge.to);
-      descendants.push(...getDescendants(edge.to));
-    });
-    return descendants;
-  }
-
-  // 初始布局
-  applyCustomLayout();
-
-  // 语音输入功能（示例）
   document.getElementById('voiceInputBtn').addEventListener('click', function() {
     alert('语音输入功能尚未实现');
   });
 </script>
+
 </body>
 </html>
