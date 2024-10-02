@@ -122,25 +122,6 @@ elements.jumpStageBtn.addEventListener('click', () => {
     if (selectedStep !== "") sendMessage('', false);
 });
 
-// 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-elements.userInput.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-        if (event.ctrlKey) {
-            // Ctrl+Enter: send message
-            event.preventDefault();
-            sendMessage();
-        } else if (!event.shiftKey) {
-            // Enter without Shift or Ctrl: insert newline
-            event.preventDefault();
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            const value = this.value;
-            this.value = value.substring(0, start) + '\n' + value.substring(end);
-            this.selectionStart = this.selectionEnd = start + 1;
-        }
-    }
-});
-
 // 侧边栏切换功能
 const sidebar = document.querySelector('.sidebar');
 const sidebarToggle = document.querySelector('.sidebar-toggle');
@@ -248,10 +229,6 @@ network.on('doubleClick', function (params) {
 
 // 键盘事件处理
 document.addEventListener('keydown', function (event) {
-    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
-        return; // 输入框或文本区域聚焦时不处理
-    }
-
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
         const selectedNode = selectedNodes[0];
@@ -388,6 +365,25 @@ function getDescendants(nodeId) {
         descendants.push(...getDescendants(edge.to));
     });
     return descendants;
+}
+
+// 检查是否会形成环路
+function willFormCycle(fromId, toId) {
+    const visited = new Set();
+
+    function dfs(currentId) {
+        if (currentId === fromId) return true;
+        if (visited.has(currentId)) return false;
+
+        visited.add(currentId);
+        const childEdges = edges.get().filter(edge => edge.from === currentId);
+        for (let edge of childEdges) {
+            if (dfs(edge.to)) return true;
+        }
+        return false;
+    }
+
+    return dfs(toId);
 }
 
 // 初始布局
