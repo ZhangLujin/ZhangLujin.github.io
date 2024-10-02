@@ -1,3 +1,5 @@
+/* styles.css */
+
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
 :root {
@@ -200,17 +202,6 @@ body {
     background: #3DAFA9;
 }
 
-/* 新增的样式 */
-
-/* 思维导图容器 */
-#mindmap {
-    width: 100%;
-    height: 100%;
-    border: 1px solid #ccc;
-    border-radius: 15px;
-    background-color: #fff;
-}
-
 /* 侧边栏样式 */
 .sidebar {
     position: fixed;
@@ -242,56 +233,6 @@ body {
     border-bottom-left-radius: 5px;
     cursor: pointer;
     z-index: 1001;
-}
-
-/* 操作指引样式 */
-.operation-instructions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f0f4f8;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-}
-
-.instruction-item {
-    display: flex;
-    align-items: center;
-    margin: 5px 10px;
-    font-size: 14px;
-    color: #4a5568;
-}
-
-.instruction-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 5px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-}
-
-.add-node-icon {
-    background-color: #48bb78;
-    color: white;
-}
-
-.add-child-icon {
-    background-color: #4299e1;
-    color: white;
-}
-
-.edit-node-icon {
-    background-color: #ed8936;
-    color: white;
-}
-
-.delete-node-icon {
-    background-color: #e53e3e;
-    color: white;
 }
 
 /* 结构项样式 */
