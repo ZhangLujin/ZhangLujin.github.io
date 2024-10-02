@@ -1,7 +1,9 @@
 import json
 import os
-from flask import request, jsonify
+from flask import Flask, request, jsonify
 from .ai_service import call_openai_api
+
+app = Flask(__name__)
 
 # 配置文件的路径，指向上级目录中的 config 文件夹里的 chat_flow_config.json 文件
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), '..', 'config', 'chat_flow_config.json')
@@ -24,8 +26,25 @@ def guided_essay_flow(user_input, state):
         return "配置加载失败，请检查配置文件。", state, []
 
     current_step = state.get('current_step', 0)
-    max_completed_step = state.get('max_completed_step', 0)  # 记录用户到达的最高步骤
+    max_completed_step = state.get('max_completed_step', 0)
     conversation = state.get('conversation', [])
+
+    # 检查是否需要跳到特定阶段
+    if 'jump_to_step' in state:
+        new_step = state['jump_to_step']
+        if 0 <= new_step < len(config['flow']):
+            current_step = new_step
+            # 更新 max_completed_step
+            if new_step > max_completed_step:
+                max_completed_step = new_step
+            state = {
+                'current_step': current_step,
+                'conversation': conversation,
+                'max_completed_step': max_completed_step
+            }
+            return config['flow'][current_step]['display_text'], state, config['flow']
+        else:
+            return "无效的阶段跳转请求。", state, config['flow']
 
     if current_step >= len(config['flow']):
         # 如果流程完成，返回完成信息、状态和步骤结构
@@ -33,28 +52,17 @@ def guided_essay_flow(user_input, state):
 
     step_config = config['flow'][current_step]
 
+    # 第一步时无需用户输入直接展示
+    if not user_input and current_step == 0:
+        return step_config['display_text'], {
+            'current_step': 0,
+            'conversation': conversation,
+            'max_completed_step': max_completed_step
+        }, config['flow']
+
     # 将用户输入添加到对话记录中
     if user_input:
         conversation.append({"role": "user", "content": user_input})
-
-    # 跳转到特定步骤，更新max_completed_step
-    if 'jump_to_step' in state:
-        new_step = state['jump_to_step']
-        if new_step >= 0 and new_step <= max_completed_step:
-            # 更新最高完成步骤
-            max_completed_step = max(max_completed_step, new_step)
-            new_state = {
-                'current_step': new_step,
-                'conversation': conversation,
-                'max_completed_step': max_completed_step  # 保留最高步骤记录
-            }
-            return config['flow'][new_step]['display_text'], new_state, config['flow']
-        else:
-            return "无效的阶段跳转请求。", state, config['flow']
-
-    # 第一步时无需用户输入直接展示
-    if not user_input and current_step == 0:
-        return step_config['display_text'], {'current_step': 0, 'conversation': conversation, 'max_completed_step': 0}, config['flow']
 
     # 准备调用 AI 模型的提示内容，包括系统提示和对话记录
     prompt = [
@@ -73,23 +81,23 @@ def guided_essay_flow(user_input, state):
         'max_completed_step': max_completed_step
     }
 
-    # 当 AI 回复中包含"继续下一步"或者用户请求强制跳到下一步时，进入下一步
-    if "继续下一步" in response or 'force_next_step' in state:
-        # 更新到下一步，并更新用户已完成的最高步骤
-        new_state['current_step'] = current_step + 1
-        new_state['max_completed_step'] = max(new_state['max_completed_step'], new_state['current_step'])
-        if new_state['current_step'] < len(config['flow']):
-            return config['flow'][new_state['current_step']]['display_text'], new_state, config['flow']
+    # 当 AI 回复中包含“继续下一步”或者用户请求强制跳到下一步时，更新到下一步
+    if "继续下一步" in response or state.get('force_next_step', False):
+        new_step = current_step + 1
+        if new_step < len(config['flow']):
+            new_state['current_step'] = new_step
+            new_state['max_completed_step'] = max(new_state['max_completed_step'], new_step)
+            return config['flow'][new_step]['display_text'], new_state, config['flow']
         else:
             return "写作流程已完成。", new_state, config['flow']
 
     return response, new_state, config['flow']
 
-# 处理聊天请求
+# 处理聊天请求接口
+@app.route('/api/chat', methods=['POST'])
 def chat():
     if request.method != 'POST':
         return jsonify({"error": "Only POST method is allowed"}), 405
-
     try:
         body = request.json
         user_input = body.get('message', '')
@@ -98,7 +106,11 @@ def chat():
         # 检查是否需要跳到特定阶段
         jump_to_step = body.get('jump_to_step', None)
         if jump_to_step is not None:
-            state['jump_to_step'] = jump_to_step
+            try:
+                jump_to_step = int(jump_to_step)
+                state['jump_to_step'] = jump_to_step
+            except ValueError:
+                return jsonify({"error": "jump_to_step 必须是整数。"}), 400
 
         # 检查是否需要强制跳到下一步
         force_next_step = body.get('force_next_step', False)
@@ -110,7 +122,6 @@ def chat():
 
         # 返回回复和状态给前端
         return jsonify({"response": response, "state": new_state, "structure": structure}), 200
-
     except Exception as e:
         print(f"Error in chat function: {str(e)}")
         return jsonify({"error": str(e), "response": "抱歉，出现了一个错误。请重试或联系支持。"}), 500
