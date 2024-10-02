@@ -122,6 +122,20 @@ elements.jumpStageBtn.addEventListener('click', () => {
     if (selectedStep !== "") sendMessage('', false);
 });
 
+// 处理按键事件：Enter 发送，Ctrl+Enter 换行
+elements.userInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !event.ctrlKey) {
+        event.preventDefault();
+        sendMessage();
+    } else if (event.key === 'Enter' && event.ctrlKey) {
+        // 插入换行
+        const cursorPosition = this.selectionStart;
+        const text = this.value;
+        this.value = text.slice(0, cursorPosition) + "\n" + text.slice(cursorPosition);
+        this.selectionStart = this.selectionEnd = cursorPosition + 1;
+    }
+});
+
 // 侧边栏切换功能
 const sidebar = document.querySelector('.sidebar');
 const sidebarToggle = document.querySelector('.sidebar-toggle');
@@ -188,8 +202,8 @@ network.on('doubleClick', function (params) {
         const input = document.createElement('textarea');
         input.value = node.label;
         input.style.position = 'absolute';
-        input.style.left = params.event.pageX + 'px';
-        input.style.top = params.event.pageY + 'px';
+        input.style.left = params.event.pointer.DOM.x + 'px';
+        input.style.top = params.event.pointer.DOM.y + 'px';
         input.style.zIndex = 1000;
         input.style.width = '200px';
         input.style.height = '50px';
@@ -203,7 +217,7 @@ network.on('doubleClick', function (params) {
         input.select();
 
         input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 const newLabel = input.value.trim();
                 if (newLabel !== '') {
@@ -229,10 +243,13 @@ network.on('doubleClick', function (params) {
 
 // 键盘事件处理
 document.addEventListener('keydown', function (event) {
+    // 排除在编辑节点时触发
+    if (isEditingNode) return;
+
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
         const selectedNode = selectedNodes[0];
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && !event.ctrlKey) {
             event.preventDefault();
             const connectedEdges = network.getConnectedEdges(selectedNode);
             const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
@@ -251,6 +268,7 @@ document.addEventListener('keydown', function (event) {
             edges.add({ from: selectedNode, to: newNodeId });
             setTimeout(applyCustomLayout, 100);
         } else if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault();
             deleteNodeAndDescendants(selectedNode);
             setTimeout(applyCustomLayout, 100);
         }
