@@ -70,21 +70,15 @@ function sendMessage(message = '', nextStep = false) {
         .then(response => response.json())
         .then(data => {
             if (data.error) throw new Error(data.error);
+            currentState = data.state;
+            updateUI(currentState.current_step, data.structure);
+
             if (data.response) {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
                 scrollChatToBottom();
             }
-            currentState = data.state;
-            updateUI(currentState.current_step, data.structure);
-            enableUserInput();
 
-            // 检查是否需要自动显示下一阶段的内容
-            if (data.display_text) {
-                setTimeout(() => {
-                    elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
-                    scrollChatToBottom();
-                }, 500);
-            }
+            enableUserInput();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -165,14 +159,6 @@ elements.jumpStageBtn.addEventListener('click', () => {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
                 scrollChatToBottom();
                 updateUI(currentState.current_step, data.structure);
-
-                // 显示跳转后的阶段内容
-                if (data.display_text) {
-                    setTimeout(() => {
-                        elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
-                        scrollChatToBottom();
-                    }, 500);
-                }
             })
             .catch(error => {
                 console.error('Error:', error);
