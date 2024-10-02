@@ -1,5 +1,3 @@
-// script.js
-
 // 动画效果
 gsap.from("header", { opacity: 0, y: -20, duration: 0.6, ease: "power3.out" });
 gsap.from("nav", { opacity: 0, y: -10, duration: 0.6, delay: 0.2, ease: "power3.out" });
@@ -131,18 +129,21 @@ window.addEventListener('load', () => sendMessage(''));
 
 // 按钮事件监听
 elements.sendTextBtn.addEventListener('click', () => sendMessage());
+
 elements.nextStageBtn.addEventListener('click', () => {
     const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
     elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
     scrollChatToBottom();
     sendMessage(presetUserMessage, true);
 });
+
 elements.restartBtn.addEventListener('click', () => {
     currentState = { current_step: 0, conversation: [], max_completed_step: 0 };
     elements.chatBox.innerHTML = '';
     elements.stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
     sendMessage('');
 });
+
 elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
     if (selectedStep !== "") {
