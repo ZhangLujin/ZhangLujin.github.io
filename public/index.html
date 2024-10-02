@@ -117,7 +117,11 @@
   gsap.from("footer", { opacity: 0, y: 20, duration: 0.6, delay: 0.6, ease: "power3.out" });
 
   // 全局状态
-  let currentState = { current_step: 0, conversation: [], max_completed_step: 0 };
+  const state = {
+    currentStep: 0,
+    conversation: [],
+    maxCompletedStep: 0
+  };
 
   // 获取元素
   const elements = {
@@ -150,7 +154,7 @@
     if (!message) {
       message = elements.userInput.value;
     }
-    if (!message.trim() && currentState.current_step !== 0 && !nextStep) return;
+    if (!message.trim() && state.currentStep !== 0 && !nextStep) return;
 
     disableUserInput();
 
@@ -160,8 +164,8 @@
     elements.userInput.value = '';
 
     const bodyData = nextStep
-            ? { state: currentState, force_next_step: true }
-            : { message: message, state: currentState };
+            ? { state, force_next_step: true }
+            : { message, state };
 
     fetch('/api/chat', {
       method: 'POST',
@@ -175,23 +179,18 @@
               if (data.error) throw new Error(data.error);
               if (data.response) {
                 elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                scrollChatToBottom();
+                elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
               }
-              currentState = data.state;
-              updateUI(currentState.current_step, data.structure);
+              state.currentStep = data.state.current_step;
+              state.maxCompletedStep = Math.max(state.maxCompletedStep, state.currentStep);
+              updateUI(state.currentStep, data.structure);
               enableUserInput();
             })
             .catch(error => {
               console.error('Error:', error);
               elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '发生了一个错误，请稍后重试。'}</div>`;
-              scrollChatToBottom();
               enableUserInput();
             });
-  }
-
-  // 滚动聊天框到底部
-  function scrollChatToBottom() {
-    elements.chatBox.scrollTop = elements.chatBox.scrollHeight;
   }
 
   // 更新界面
@@ -210,9 +209,7 @@
         elements.structureContainer.appendChild(arrow);
       }
 
-      if (index <= currentState.max_completed_step) {
-        updateStageSelect(index, stage.step);
-      }
+      if (index <= state.maxCompletedStep) updateStageSelect(index, stage.step);
     });
 
     document.querySelector('h1').textContent = step >= structure.length ? 'AI 作文答疑系统' : 'AI 作文引导系统';
@@ -222,9 +219,7 @@
   // 更新阶段选择下拉框
   function updateStageSelect(completedStep, stepLabel) {
     const options = elements.stageSelect.options;
-    const existingOptions = Array.from(options).map(option => option.value);
-
-    if (!existingOptions.includes(String(completedStep))) {
+    if (!Array.from(options).some(option => option.value === String(completedStep))) {
       const option = document.createElement('option');
       option.value = completedStep;
       option.text = `返回 ${stepLabel} 阶段`;
@@ -240,53 +235,36 @@
   elements.nextStageBtn.addEventListener('click', () => {
     const presetUserMessage = "我觉得我的答案已经足够了，我们可以继续下一步吗？";
     elements.chatBox.innerHTML += `<div class="chat-message user-message"><strong>用户:</strong> ${presetUserMessage}</div>`;
-    scrollChatToBottom();
     sendMessage(presetUserMessage, true);
   });
   elements.restartBtn.addEventListener('click', () => {
-    currentState = { current_step: 0, conversation: [], max_completed_step: 0 };
+    state.currentStep = 0;
+    state.conversation = [];
+    state.maxCompletedStep = 0;
     elements.chatBox.innerHTML = '';
     elements.stageSelect.innerHTML = '<option value="">选择你要跳转的阶段</option>';
     sendMessage('');
   });
   elements.jumpStageBtn.addEventListener('click', () => {
     const selectedStep = elements.stageSelect.value;
-    if (selectedStep !== "") {
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ state: currentState, jump_to_step: parseInt(selectedStep) })
-      })
-              .then(response => response.json())
-              .then(data => {
-                currentState = data.state;
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                scrollChatToBottom();
-                updateUI(currentState.current_step, data.structure);
-              })
-              .catch(error => {
-                console.error('Error:', error);
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>错误:</strong> ${error.message || '跳转阶段时发生了一个错误。'}</div>`;
-                scrollChatToBottom();
-              });
-    }
+    if (selectedStep !== "") sendMessage('', false);
   });
 
   // 添加用户输入的键盘事件监听器，处理 Enter 和 Ctrl+Enter
-  elements.userInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      if (e.ctrlKey) {
-        let start = this.selectionStart;
-        let end = this.selectionEnd;
-        let value = this.value;
-        this.value = value.slice(0, start) + "\n" + value.slice(end);
-        this.selectionStart = this.selectionEnd = start + 1;
-        e.preventDefault();
-      } else {
-        e.preventDefault();
+  elements.userInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+      if (event.ctrlKey) {
+        // Ctrl+Enter: send message
+        event.preventDefault();
         sendMessage();
+      } else if (!event.shiftKey) {
+        // Enter without Shift or Ctrl: insert newline
+        event.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const value = this.value;
+        this.value = value.substring(0, start) + '\n' + value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 1;
       }
     }
   });
@@ -297,7 +275,6 @@
   sidebarToggle.addEventListener('click', () => {
     sidebar.classList.toggle('open');
   });
-
 
   // 思维导图功能
   // 初始化节点和边
