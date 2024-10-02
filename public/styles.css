@@ -170,7 +170,6 @@ body {
     border-bottom-left-radius: 0;
 }
 
-/* Animations */
 @keyframes float {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
@@ -181,7 +180,6 @@ body {
     animation: float 3s ease-in-out infinite;
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 10px;
 }
@@ -200,7 +198,6 @@ body {
     background: #3DAFA9;
 }
 
-/* 侧边栏样式 */
 .sidebar {
     position: fixed;
     top: 0;
@@ -218,7 +215,6 @@ body {
     right: 0;
 }
 
-/* 侧边栏切换按钮样式 */
 .sidebar-toggle {
     position: fixed;
     top: 50%;
@@ -233,7 +229,6 @@ body {
     z-index: 1001;
 }
 
-/* 结构项样式 */
 .structure-container {
     height: 100%;
     overflow-y: auto;

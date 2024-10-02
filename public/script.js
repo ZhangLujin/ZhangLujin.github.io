@@ -44,8 +44,7 @@ function scrollChatToBottom() {
 // 发送消息
 function sendMessage(message = '', nextStep = false) {
     if (!message) {
-        message = elements.userInput.value;
-    }
+        message = elements.userInput.value;}
     if (!message.trim() && currentState.current_step !== 0 && !nextStep) return;
 
     disableUserInput();
