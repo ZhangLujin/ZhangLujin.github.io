@@ -182,8 +182,8 @@
       const input = document.createElement('textarea');
       input.value = node.label;
       input.style.position = 'absolute';
-      input.style.left = `${domPos.x - 100}px`;
-      input.style.top = `${domPos.y - 25}px`;
+      input.style.left = ${domPos.x - 100}px;
+      input.style.top = ${domPos.y - 25}px;
       input.style.zIndex = 1000;
       input.style.width = '200px';
       input.style.height = '50px';
@@ -237,7 +237,7 @@
         const connectedEdges = network.getConnectedEdges(selectedNode);
         const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
         const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
+        nodes.add({ id: newNodeId, label: 新节点${newNodeId}, shape: 'box', fixed: { x: false, y: false } });
         if (parentEdge) {
           edges.add({ from: parentEdge.from, to: newNodeId });
         } else {
@@ -247,7 +247,7 @@
       } else if (event.key === 'Tab') {
         event.preventDefault();
         const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
+        nodes.add({ id: newNodeId, label: 新节点${newNodeId}, shape: 'box', fixed: { x: false, y: false } });
         edges.add({ from: selectedNode, to: newNodeId });
         setTimeout(applyCustomLayout, 100);
       } else if (event.key === 'Backspace' || event.key === 'Delete') {
