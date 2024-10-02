@@ -155,11 +155,15 @@
             .then(response => response.json())
             .then(data => {
               if (data.error) throw new Error(data.error);
-              if (data.response) {
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
-                scrollChatToBottom();
-              }
               currentState = data.state;
+
+              if (data.display_text) {
+                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
+              } else if (data.response) {
+                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+              }
+
+              scrollChatToBottom();
               updateUI(currentState.current_step, data.structure);
               enableUserInput();
             })
@@ -239,7 +243,11 @@
               .then(response => response.json())
               .then(data => {
                 currentState = data.state;
-                elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                if (data.display_text) {
+                  elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.display_text}</div>`;
+                } else if (data.response) {
+                  elements.chatBox.innerHTML += `<div class="chat-message ai-message"><strong>AI:</strong> ${data.response}</div>`;
+                }
                 scrollChatToBottom();
                 updateUI(currentState.current_step, data.structure);
               })
