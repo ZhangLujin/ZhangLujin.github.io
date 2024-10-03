@@ -4,68 +4,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>思维导图</title>
-  <link rel="stylesheet" href="./styles.css">
+  <title>趣味思维导图</title>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
     body, html {
       height: 100%;
       margin: 0;
       padding: 0;
+      font-family: 'Comic Neue', cursive;
+      background-color: #FFF5E6;
     }
 
     #mindmap {
       width: 100%;
       height: 100%;
-      background-color: #f0f4f8;
+      background-color: #FFF5E6;
       background-image:
-              linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
-      background-size: 20px 20px;
+              radial-gradient(#FFD699 2px, transparent 2px),
+              radial-gradient(#FFB366 2px, transparent 2px);
+      background-size: 40px 40px;
+      background-position: 0 0, 20px 20px;
     }
 
     .operation-instructions {
       position: absolute;
       top: 10px;
       left: 10px;
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 14px;
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.1), -5px -5px 15px rgba(255,255,255,0.5);
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 15px;
+      font-size: 16px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      border: 3px solid #FF9933;
     }
 
     .instruction-item {
-      margin-bottom: 5px;
+      margin-bottom: 10px;
     }
 
     .instruction-icon {
       display: inline-block;
-      width: 20px;
-      height: 20px;
+      width: 30px;
+      height: 30px;
       text-align: center;
-      line-height: 20px;
+      line-height: 30px;
       border-radius: 50%;
-      margin-right: 5px;
+      margin-right: 10px;
+      font-size: 18px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
-    .add-node-icon { background-color: #48bb78; color: white; }
-    .add-child-icon { background-color: #4299e1; color: white; }
-    .edit-node-icon { background-color: #ed8936; color: white; }
-    .delete-node-icon { background-color: #e53e3e; color: white; }
+    .add-node-icon { background-color: #98FB98; color: #006400; }
+    .add-child-icon { background-color: #87CEFA; color: #00008B; }
+    .edit-node-icon { background-color: #FFA07A; color: #8B0000; }
+    .delete-node-icon { background-color: #FFCC99; color: #8B4513; }
 
     #overview-button {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      background-color: #f0f4f8;
+      background-color: #FF9933;
       border: none;
       outline: none;
       cursor: pointer;
-      box-shadow: 5px 5px 10px rgba(163,177,198,0.5), -5px -5px 10px rgba(255,255,255,0.5);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -73,36 +80,27 @@
     }
 
     #overview-button:hover {
-      box-shadow: 3px 3px 5px rgba(163,177,198,0.5), -3px -3px 5px rgba(255,255,255,0.5);
+      transform: scale(1.1);
     }
 
     #overview-button:active {
-      box-shadow: inset 3px 3px 5px rgba(163,177,198,0.5), inset -3px -3px 5px rgba(255,255,255,0.5);
+      transform: scale(0.9);
     }
 
     #overview-button svg {
-      width: 24px;
-      height: 24px;
-      fill: #4a5568;
+      width: 30px;
+      height: 30px;
+      fill: #8B4513;
     }
 
-    @keyframes fadeInGrow {
-      0% {
-        opacity: 0;
-        transform: scale(0.1);
-      }
-      70% {
-        opacity: 0.7;
-        transform: scale(1.1);
-      }
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
+    @keyframes bounceIn {
+      0% { transform: scale(0.1); opacity: 0; }
+      60% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); }
     }
 
     .new-node {
-      animation: fadeInGrow 0.5s ease-out;
+      animation: bounceIn 0.6s;
     }
   </style>
 </head>
@@ -148,15 +146,25 @@
     layout: { hierarchical: false },
     nodes: {
       shape: 'box',
-      widthConstraint: { minimum: 100, maximum: 200 },
-      font: { size: 16, multi: true, face: 'Noto Sans SC' },
-      borderWidth: 2,
+      widthConstraint: { minimum: 100, maximum: 250 },
+      font: { size: 20, multi: true, face: 'Comic Neue' },
+      borderWidth: 3,
       shadow: true,
+      color: {
+        border: '#FF9933',
+        background: '#FFFACD',
+        highlight: { border: '#FF8000', background: '#FFE699' },
+        hover: { border: '#FF8000', background: '#FFE699' }
+      },
+      shapeProperties: {
+        borderRadius: 10
+      },
       fixed: { x: true, y: true }
     },
     edges: {
       arrows: 'to',
-      width: 2,
+      width: 3,
+      color: '#FF9933',
       smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 }
     },
     physics: { enabled: false },
@@ -200,17 +208,18 @@
       const input = document.createElement('textarea');
       input.value = node.label;
       input.style.position = 'absolute';
-      input.style.left = `${domPos.x - 100}px`;
-      input.style.top = `${domPos.y - 25}px`;
+      input.style.left = `${domPos.x - 140}px`;  // Increased width
+      input.style.top = `${domPos.y - 35}px`;
       input.style.zIndex = 1000;
-      input.style.width = '200px';
-      input.style.height = '50px';
-      input.style.fontSize = '16px';
-      input.style.border = '2px solid #4299e1';
-      input.style.borderRadius = '8px';
+      input.style.width = '280px';  // Increased width
+      input.style.height = '70px';  // Increased height
+      input.style.fontSize = '22px';  // Increased font size
+      input.style.fontFamily = 'Comic Neue, cursive';
+      input.style.border = '3px solid #FF9933';
+      input.style.borderRadius = '10px';
       input.style.padding = '10px';
-      input.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.1)';
-      input.style.backgroundColor = 'white';
+      input.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.1)';
+      input.style.backgroundColor = '#FFFACD';
       document.body.appendChild(input);
       input.focus();
       input.select();
@@ -253,12 +262,12 @@
         const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
         const newNodeId = getNextNodeId();
         addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, parentEdge ? parentEdge.from : selectedNode);
-        network.selectNodes([newNodeId]); // 选中新节点
+        network.selectNodes([newNodeId]);
       } else if (event.key === 'Tab') {
         event.preventDefault();
         const newNodeId = getNextNodeId();
         addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, selectedNode);
-        network.selectNodes([newNodeId]); // 选中新节点
+        network.selectNodes([newNodeId]);
       } else if (event.key === 'Backspace' || event.key === 'Delete') {
         event.preventDefault();
         const previousNodeId = getPreviousNodeId(selectedNode);
@@ -266,7 +275,7 @@
         setTimeout(() => {
           applyCustomLayout();
           if (previousNodeId) {
-            network.selectNodes([previousNodeId]); // 选中前一个节点
+            network.selectNodes([previousNodeId]);
           }
         }, 100);
       }
@@ -301,8 +310,8 @@
   function applyCustomLayout() {
     const tree = buildTree();
     const roots = findRoots(tree);
-    const nodeSeparation = 120;
-    const levelSeparation = 180;
+    const nodeSeparation = 150;
+    const levelSeparation = 220;
     const startX = 50;
     const startY = container.clientHeight / 2;
     let currentY = startY;
@@ -387,7 +396,7 @@
     setTimeout(() => {
       nodes.update({
         id: newNodeId,
-        color: { background: '#ffffff', border: '#2B7CE9' },
+        color: { background: '#FFFACD', border: '#FF9933' },
         font: { color: '#000000' },
         className: 'new-node'
       });
@@ -398,12 +407,11 @@
         id: newNodeId,
         className: ''
       });
-    }, 550);
+    }, 650);
 
     setTimeout(applyCustomLayout, 100);
   }
 
-  // 新增：获取前一个创建的节点ID
   function getPreviousNodeId(currentNodeId) {
     const allNodes = nodes.get();
     const currentIndex = allNodes.findIndex(node => node.id === currentNodeId);
