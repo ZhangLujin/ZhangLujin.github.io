@@ -5,22 +5,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>趣味思维导图</title>
+  <!-- 引入vis-network库，用于创建交互式网络图 -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
+    /* 引入Comic Neue字体 */
     @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
 
-    body, html {
+    /* 基础样式设置 */
+    body,
+    html {
       height: 100%;
       margin: 0;
       padding: 0;
       font-family: 'Comic Neue', cursive;
       background-color: #FFF5E6;
+      position: relative; /* 为悬浮容器提供定位上下文 */
     }
 
+    /* 思维导图容器样式 */
     #mindmap {
       width: 100%;
       height: 100%;
       background-color: #FFF5E6;
+      /* 创建点状背景 */
       background-image:
               radial-gradient(#FFD699 2px, transparent 2px),
               radial-gradient(#FFB366 2px, transparent 2px);
@@ -28,22 +35,65 @@
       background-position: 0 0, 20px 20px;
     }
 
-    .operation-instructions {
+    /* 悬浮操作说明容器样式 */
+    #operation-container {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: rgba(255, 255, 255, 0.9);
+      top: 20px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.95);
       padding: 15px;
-      border-radius: 15px;
-      font-size: 16px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      border: 3px solid #FF9933;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+      border: 2px solid #FF9933;
+      overflow: auto; /* 当内容超出时显示滚动条 */
+      max-width: 90%;
+      max-height: 90%;
+      /* 移除最小宽度和高度限制 */
+      /* min-width: 200px; */
+      /* min-height: 150px; */
+      z-index: 1000; /* 确保悬浮在最上层 */
+      box-sizing: border-box;
+      /* 禁用用户手动缩放 */
+      resize: none;
     }
 
+    /* 关闭按钮样式 */
+    #close-operation {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #8B4513;
+    }
+
+    /* 展开按钮样式 */
+    #show-operation-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #FF9933;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: #FFFFFF;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      display: none; /* 初始隐藏，只有操作说明容器隐藏时显示 */
+      z-index: 1000;
+    }
+
+    /* 操作说明项目样式 */
     .instruction-item {
       margin-bottom: 10px;
+      display: flex;
+      align-items: center;
     }
 
+    /* 操作图标样式 */
     .instruction-icon {
       display: inline-block;
       width: 30px;
@@ -53,14 +103,50 @@
       border-radius: 50%;
       margin-right: 10px;
       font-size: 18px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
     }
 
-    .add-node-icon { background-color: #98FB98; color: #006400; }
-    .add-child-icon { background-color: #87CEFA; color: #00008B; }
-    .edit-node-icon { background-color: #FFA07A; color: #8B0000; }
-    .delete-node-icon { background-color: #FFCC99; color: #8B4513; }
+    /* 不同操作的图标颜色 */
+    .add-node-icon {
+      background-color: #98FB98;
+      color: #006400;
+    }
 
+    .add-child-icon {
+      background-color: #87CEFA;
+      color: #00008B;
+    }
+
+    .edit-node-icon {
+      background-color: #FFA07A;
+      color: #8B0000;
+    }
+
+    .delete-node-icon {
+      background-color: #FFCC99;
+      color: #8B4513;
+    }
+
+    .undo-icon {
+      background-color: #D3D3D3;
+      color: #000000;
+    }
+
+    .redo-icon {
+      background-color: #D3D3D3;
+      color: #000000;
+    }
+
+    /* 操作按钮样式 */
+    .operation-button {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* 概览按钮样式 */
     #overview-button {
       position: fixed;
       bottom: 20px;
@@ -72,13 +158,15 @@
       border: none;
       outline: none;
       cursor: pointer;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
       display: flex;
       justify-content: center;
       align-items: center;
       transition: all 0.3s ease;
+      z-index: 1000; /* 确保按钮在最上层 */
     }
 
+    /* 概览按钮悬停和点击效果 */
     #overview-button:hover {
       transform: scale(1.1);
     }
@@ -87,61 +175,141 @@
       transform: scale(0.9);
     }
 
+    /* 概览按钮图标样式 */
     #overview-button svg {
       width: 30px;
       height: 30px;
       fill: #8B4513;
     }
 
+    /* 新节点弹出动画 */
     @keyframes bounceIn {
-      0% { transform: scale(0.1); opacity: 0; }
-      60% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); }
+      0% {
+        transform: scale(0.1);
+        opacity: 0;
+      }
+
+      60% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
 
     .new-node {
       animation: bounceIn 0.6s;
     }
+
+    /* 滚动条样式优化 */
+    #operation-container::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    #operation-container::-webkit-scrollbar-thumb {
+      background-color: #FF9933;
+      border-radius: 4px;
+    }
+
+    #operation-container::-webkit-scrollbar-track {
+      background-color: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+    }
   </style>
 </head>
 
 <body>
-<div class="operation-instructions">
-  <div class="instruction-item">
-    <span class="instruction-icon add-node-icon">+</span>
-    <span>回车: 添加同级节点</span>
-  </div>
-  <div class="instruction-item">
-    <span class="instruction-icon add-child-icon">⇥</span>
-    <span>Tab: 添加子节点</span>
-  </div>
-  <div class="instruction-item">
-    <span class="instruction-icon edit-node-icon">✎</span>
-    <span>双击左键: 编辑节点</span>
-  </div>
-  <div class="instruction-item">
-    <span class="instruction-icon delete-node-icon">✖</span>
-    <span>Delete: 删除节点</span>
+<!-- 操作说明悬浮容器 -->
+<div id="operation-container" style="display: none;">
+  <!-- 关闭按钮 -->
+  <button id="close-operation" title="关闭操作说明">&times;</button>
+  <div class="operation-instructions">
+    <div class="instruction-item">
+      <span class="instruction-icon add-node-icon">+</span>
+      <span>回车: 添加同级节点</span>
+    </div>
+    <div class="instruction-item">
+      <span class="instruction-icon add-child-icon">⇥</span>
+      <span>Tab: 添加子节点</span>
+    </div>
+    <div class="instruction-item">
+      <span class="instruction-icon edit-node-icon">✎</span>
+      <span>双击左键: 编辑节点</span>
+    </div>
+    <div class="instruction-item">
+      <span class="instruction-icon delete-node-icon">✖</span>
+      <span>Delete: 删除节点</span>
+    </div>
+    <div class="instruction-item operation-button" id="undo-button" title="撤销">
+      <span class="instruction-icon undo-icon">↶</span>
+      <span style="margin-left: 10px;">Ctrl+Z: 撤销</span>
+    </div>
+    <div class="instruction-item operation-button" id="redo-button" title="重做">
+      <span class="instruction-icon redo-icon">↷</span>
+      <span style="margin-left: 10px;">Ctrl+Y: 重做</span>
+    </div>
   </div>
 </div>
 
+<!-- 展开操作说明按钮 -->
+<button id="show-operation-button" style="display: block;" title="显示操作说明">显示操作说明</button>
+<!-- 思维导图容器 -->
 <div id="mindmap"></div>
 
+<!-- 概览按钮 -->
 <button id="overview-button" title="重新调整视图">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z"/>
+    <path
+            d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
   </svg>
 </button>
 
 <script>
+  // 获取元素
+  const operationContainer = document.getElementById('operation-container');
+  const closeOperationButton = document.getElementById('close-operation');
+  const showOperationButton = document.getElementById('show-operation-button');
+  const overviewButton = document.getElementById('overview-button');
+  const undoButton = document.getElementById('undo-button');
+  const redoButton = document.getElementById('redo-button');
+
+  // 控制最后被编辑节点的ID
+  let lastModifiedNodeId = null;
+
+  // 关闭操作说明容器
+  closeOperationButton.addEventListener('click', () => {
+    operationContainer.style.display = 'none';
+    showOperationButton.style.display = 'block';
+  });
+
+  // 展开操作说明容器
+  showOperationButton.addEventListener('click', () => {
+    operationContainer.style.display = 'block';
+    showOperationButton.style.display = 'none';
+  });
+
+  // 初始化节点数据
   const nodes = new vis.DataSet([
-    { id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } }
+    {
+      id: 1,
+      label: '主题',
+      shape: 'box',
+      font: { multi: true },
+      fixed: { x: true, y: true }
+    }
   ]);
 
+  // 初始化边数据
   const edges = new vis.DataSet([]);
 
+  // 获取思维导图容器
   const container = document.getElementById('mindmap');
   const data = { nodes, edges };
+
+  // 配置网络图选项
   const options = {
     layout: { hierarchical: false },
     nodes: {
@@ -183,9 +351,49 @@
     manipulation: { enabled: false }
   };
 
-  const overviewButton = document.getElementById('overview-button');
+  // 创建网络图实例
   const network = new vis.Network(container, data, options);
 
+  // 历史记录栈
+  const undoStack = [];
+  const redoStack = [];
+  let isExecutingUndoRedo = false;
+
+  // 函数：记录当前状态到undoStack
+  function saveStateToUndo(actionNodeId = null) {
+    if (isExecutingUndoRedo) return;
+    const currentState = {
+      nodes: nodes.get().map(node => ({ ...node })),
+      edges: edges.get().map(edge => ({ ...edge })),
+      lastModifiedNodeId: actionNodeId
+    };
+    undoStack.push(currentState);
+    // 限制历史记录栈的大小（可选）
+    if (undoStack.length > 100) {
+      undoStack.shift();
+    }
+    // 清空redoStack
+    redoStack.length = 0;
+  }
+
+  // 函数：恢复到指定状态
+  function restoreState(state) {
+    isExecutingUndoRedo = true;
+    nodes.clear();
+    edges.clear();
+    nodes.add(state.nodes);
+    edges.add(state.edges);
+    lastModifiedNodeId = state.lastModifiedNodeId;
+    applyCustomLayout();
+    isExecutingUndoRedo = false;
+
+    // 自动选中上一个被编辑的节点
+    if (lastModifiedNodeId !== null) {
+      network.selectNodes([lastModifiedNodeId]);
+    }
+  }
+
+  // 概览按钮点击事件
   overviewButton.addEventListener('click', () => {
     network.fit({
       animation: {
@@ -195,25 +403,122 @@
     });
   });
 
+  // 撤销按钮点击事件
+  undoButton.addEventListener('click', () => {
+    if (undoStack.length === 0) return;
+    const currentState = {
+      nodes: nodes.get().map(node => ({ ...node })),
+      edges: edges.get().map(edge => ({ ...edge })),
+      lastModifiedNodeId: lastModifiedNodeId
+    };
+    redoStack.push(currentState);
+    const previousState = undoStack.pop();
+    restoreState(previousState);
+  });
+
+  // 重做按钮点击事件
+  redoButton.addEventListener('click', () => {
+    if (redoStack.length === 0) return;
+    const currentState = {
+      nodes: nodes.get().map(node => ({ ...node })),
+      edges: edges.get().map(edge => ({ ...edge })),
+      lastModifiedNodeId: lastModifiedNodeId
+    };
+    undoStack.push(currentState);
+    const nextState = redoStack.pop();
+    restoreState(nextState);
+  });
+
+  // 键盘快捷键事件处理
+  document.addEventListener('keydown', function (event) {
+    // Ctrl+Z for Undo
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      undoButton.click();
+      return;
+    }
+    // Ctrl+Y for Redo
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+      event.preventDefault();
+      redoButton.click();
+      return;
+    }
+
+    const tag = event.target.tagName;
+    if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
+      return;
+    }
+
+    const selectedNodes = network.getSelectedNodes();
+    if (selectedNodes.length === 1) {
+      const selectedNode = selectedNodes[0];
+      // 检查是否是根节点（假设根节点ID为1）
+      const isRootNode = nodes.get(selectedNode).id === 1 || edges.get().filter(edge => edge.to === selectedNode).length === 0;
+
+      if (event.key === 'Enter') {
+        // 添加同级节点
+        event.preventDefault();
+        saveStateToUndo(lastModifiedNodeId);
+        const connectedEdges = network.getConnectedEdges(selectedNode);
+        const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
+        const newNodeId = getNextNodeId();
+        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, parentEdge ? parentEdge.from : selectedNode);
+        network.selectNodes([newNodeId]);
+        lastModifiedNodeId = newNodeId; // 更新最后修改节点ID
+      } else if (event.key === 'Tab') {
+        // 添加子节点
+        event.preventDefault();
+        saveStateToUndo(lastModifiedNodeId);
+        const newNodeId = getNextNodeId();
+        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, selectedNode);
+        network.selectNodes([newNodeId]);
+        lastModifiedNodeId = newNodeId; // 更新最后修改节点ID
+      } else if ((event.key === 'Backspace' || event.key === 'Delete')) {
+        // 不允许删除根节点
+        if (isRootNode) {
+          event.preventDefault();
+          alert("不允许删除根节点！");
+          return;
+        }
+
+        // 删除节点
+        event.preventDefault();
+        saveStateToUndo(lastModifiedNodeId);
+        const previousNodeId = getPreviousNodeId(selectedNode);
+        deleteNodeAndDescendants(selectedNode);
+        setTimeout(() => {
+          applyCustomLayout();
+          if (previousNodeId) {
+            network.selectNodes([previousNodeId]);
+            lastModifiedNodeId = previousNodeId; // 更新最后修改节点ID
+          }
+        }, 100);
+      }
+    }
+  });
+
   let isEditingNode = false;
 
+  // 双击节点编辑事件
   network.on('doubleClick', function (params) {
     if (params.nodes.length === 1) {
+      saveStateToUndo(lastModifiedNodeId);
       isEditingNode = true;
       const nodeId = params.nodes[0];
       const node = nodes.get(nodeId);
       const position = network.getPositions([nodeId])[nodeId];
       const domPos = network.canvasToDOM(position);
 
+      // 创建编辑输入框
       const input = document.createElement('textarea');
       input.value = node.label;
       input.style.position = 'absolute';
-      input.style.left = `${domPos.x - 140}px`;  // Increased width
+      input.style.left = `${domPos.x - 140}px`;
       input.style.top = `${domPos.y - 35}px`;
-      input.style.zIndex = 1000;
-      input.style.width = '280px';  // Increased width
-      input.style.height = '70px';  // Increased height
-      input.style.fontSize = '22px';  // Increased font size
+      input.style.zIndex = 1001; /* 高于操作说明容器 */
+      input.style.width = '280px';
+      input.style.height = '70px';
+      input.style.fontSize = '22px';
       input.style.fontFamily = 'Comic Neue, cursive';
       input.style.border = '3px solid #FF9933';
       input.style.borderRadius = '10px';
@@ -224,10 +529,15 @@
       input.focus();
       input.select();
 
+      // 处理输入变化
       const handleInputChange = () => {
         const newLabel = input.value.trim();
         if (newLabel !== '') {
-          nodes.update({ id: nodeId, label: newLabel });
+          nodes.update({
+            id: nodeId,
+            label: newLabel
+          });
+          lastModifiedNodeId = nodeId; // 更新最后修改节点ID
         }
         if (document.body.contains(input)) {
           document.body.removeChild(input);
@@ -235,6 +545,7 @@
         isEditingNode = false;
       };
 
+      // 输入框键盘事件
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
@@ -243,70 +554,47 @@
         event.stopPropagation();
       });
 
+      // 输入框失焦事件
       input.addEventListener('blur', handleInputChange);
     }
   });
 
-  document.addEventListener('keydown', function (event) {
-    const tag = event.target.tagName;
-    if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
-      return;
-    }
-
-    const selectedNodes = network.getSelectedNodes();
-    if (selectedNodes.length === 1) {
-      const selectedNode = selectedNodes[0];
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        const connectedEdges = network.getConnectedEdges(selectedNode);
-        const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
-        const newNodeId = getNextNodeId();
-        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, parentEdge ? parentEdge.from : selectedNode);
-        network.selectNodes([newNodeId]);
-      } else if (event.key === 'Tab') {
-        event.preventDefault();
-        const newNodeId = getNextNodeId();
-        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, selectedNode);
-        network.selectNodes([newNodeId]);
-      } else if (event.key === 'Backspace' || event.key === 'Delete') {
-        event.preventDefault();
-        const previousNodeId = getPreviousNodeId(selectedNode);
-        deleteNodeAndDescendants(selectedNode);
-        setTimeout(() => {
-          applyCustomLayout();
-          if (previousNodeId) {
-            network.selectNodes([previousNodeId]);
-          }
-        }, 100);
-      }
-    }
-  });
-
+  // 节点拖动开始事件
   network.on("dragStart", function (params) {
     if (params.nodes.length === 1) {
       network.setOptions({ physics: false });
     }
   });
 
+  // 节点拖动结束事件
   network.on("dragEnd", function (params) {
     if (params.nodes.length === 1) {
+      saveStateToUndo(lastModifiedNodeId);
       applyCustomLayout();
     }
   });
 
+  // 节点变化事件
   nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
-    applyCustomLayout();
+    if (!isExecutingUndoRedo) {
+      applyCustomLayout();
+    }
   });
 
+  // 边变化事件
   edges.on(['add', 'remove', 'update'], function (event, properties, senderId) {
-    applyCustomLayout();
+    if (!isExecutingUndoRedo) {
+      applyCustomLayout();
+    }
   });
 
+  // 获取下一个节点ID
   function getNextNodeId() {
     const existingIds = nodes.getIds();
     return Math.max(...existingIds) + 1;
   }
 
+  // 应用自定义布局
   function applyCustomLayout() {
     const tree = buildTree();
     const roots = findRoots(tree);
@@ -319,11 +607,21 @@
       currentY = layoutNode(root, 0, startX, currentY, nodeSeparation, levelSeparation);
     });
     nodes.forEach(node => {
-      nodes.update({ id: node.id, x: tree[node.id].x, y: tree[node.id].y });
+      nodes.update({
+        id: node.id,
+        x: tree[node.id].x,
+        y: tree[node.id].y
+      });
     });
-    network.fit();
+    network.fit({
+      animation: {
+        duration: 1000,
+        easingFunction: 'easeInOutQuad'
+      }
+    });
   }
 
+  // 构建树结构
   function buildTree() {
     const tree = {};
     nodes.forEach(node => {
@@ -337,10 +635,12 @@
     return tree;
   }
 
+  // 查找根节点
   function findRoots(tree) {
     return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
   }
 
+  // 布局节点
   function layoutNode(node, depth, xOffset, yOffset, nodeSeparation, levelSeparation) {
     node.x = xOffset + depth * levelSeparation;
     let numChildren = node.children.length;
@@ -358,12 +658,14 @@
     return currentY;
   }
 
+  // 删除节点及其后代
   function deleteNodeAndDescendants(nodeId) {
     const descendants = getDescendants(nodeId);
     nodes.remove([nodeId, ...descendants]);
     edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
   }
 
+  // 获取节点的后代
   function getDescendants(nodeId) {
     const descendants = [];
     const childEdges = edges.get().filter(edge => edge.from === nodeId);
@@ -374,6 +676,7 @@
     return descendants;
   }
 
+  // 添加带动画的新节点
   function addNodeWithAnimation(newNodeId, label, parentNodeId) {
     const parentNode = nodes.get(parentNodeId);
     const parentPos = network.getPositions([parentNodeId])[parentNodeId];
@@ -391,7 +694,10 @@
       color: { background: 'rgba(255, 255, 255, 0)', border: 'rgba(0, 0, 0, 0)' },
       font: { color: 'rgba(0, 0, 0, 0)' }
     });
-    edges.add({ from: parentNodeId, to: newNodeId });
+    edges.add({
+      from: parentNodeId,
+      to: newNodeId
+    });
 
     setTimeout(() => {
       nodes.update({
@@ -409,20 +715,29 @@
       });
     }, 650);
 
-    setTimeout(applyCustomLayout, 100);
+    setTimeout(() => {
+      applyCustomLayout();
+    }, 100);
   }
 
+  // 获取前一个节点ID
   function getPreviousNodeId(currentNodeId) {
-    const allNodes = nodes.get();
-    const currentIndex = allNodes.findIndex(node => node.id === currentNodeId);
+    const allNodes = nodes.get({
+      returnType: "object",
+      fields: ['id']
+    });
+    const allNodeArray = Object.values(allNodes);
+    const currentIndex = allNodeArray.findIndex(node => node.id === currentNodeId);
     if (currentIndex > 0) {
-      return allNodes[currentIndex - 1].id;
+      return allNodeArray[currentIndex - 1].id;
     }
     return null;
   }
 
+  // 初始应用布局
   applyCustomLayout();
 
+  // 窗口大小变化时重新应用布局
   window.addEventListener('resize', applyCustomLayout);
 </script>
 </body>
