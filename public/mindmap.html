@@ -85,6 +85,25 @@
       height: 24px;
       fill: #4a5568;
     }
+
+    @keyframes fadeInGrow {
+      0% {
+        opacity: 0;
+        transform: scale(0.1);
+      }
+      70% {
+        opacity: 0.7;
+        transform: scale(1.1);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .new-node {
+      animation: fadeInGrow 0.5s ease-out;
+    }
   </style>
 </head>
 
@@ -117,7 +136,6 @@
 </button>
 
 <script>
-  // 初始化节点和边
   const nodes = new vis.DataSet([
     { id: 1, label: '主题', shape: 'box', font: { multi: true }, fixed: { x: true, y: true } }
   ]);
@@ -157,7 +175,6 @@
     manipulation: { enabled: false }
   };
 
-  // 添加重新调整视图的功能
   const overviewButton = document.getElementById('overview-button');
   const network = new vis.Network(container, data, options);
 
@@ -172,7 +189,6 @@
 
   let isEditingNode = false;
 
-  // 双击节点编辑
   network.on('doubleClick', function (params) {
     if (params.nodes.length === 1) {
       isEditingNode = true;
@@ -215,7 +231,6 @@
           event.preventDefault();
           handleInputChange();
         }
-        // 阻止事件冒泡到全局键盘事件处理程序
         event.stopPropagation();
       });
 
@@ -223,12 +238,10 @@
     }
   });
 
-  // 键盘事件处理
   document.addEventListener('keydown', function (event) {
-    // 检查事件目标是否为输入框或文本区域
     const tag = event.target.tagName;
     if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
-      return; // 输入框或文本区域聚焦时不处理
+      return;
     }
 
     const selectedNodes = network.getSelectedNodes();
@@ -239,42 +252,39 @@
         const connectedEdges = network.getConnectedEdges(selectedNode);
         const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
         const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
-        if (parentEdge) {
-          edges.add({ from: parentEdge.from, to: newNodeId });
-        } else {
-          edges.add({ from: selectedNode, to: newNodeId });
-        }
-        setTimeout(applyCustomLayout, 100);
+        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, parentEdge ? parentEdge.from : selectedNode);
+        network.selectNodes([newNodeId]); // 选中新节点
       } else if (event.key === 'Tab') {
         event.preventDefault();
         const newNodeId = getNextNodeId();
-        nodes.add({ id: newNodeId, label: `新节点${newNodeId}`, shape: 'box', fixed: { x: false, y: false } });
-        edges.add({ from: selectedNode, to: newNodeId });
-        setTimeout(applyCustomLayout, 100);
+        addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, selectedNode);
+        network.selectNodes([newNodeId]); // 选中新节点
       } else if (event.key === 'Backspace' || event.key === 'Delete') {
         event.preventDefault();
+        const previousNodeId = getPreviousNodeId(selectedNode);
         deleteNodeAndDescendants(selectedNode);
-        setTimeout(applyCustomLayout, 100);
+        setTimeout(() => {
+          applyCustomLayout();
+          if (previousNodeId) {
+            network.selectNodes([previousNodeId]); // 选中前一个节点
+          }
+        }, 100);
       }
     }
   });
 
-  // 拖动节点时禁用物理引擎
   network.on("dragStart", function (params) {
     if (params.nodes.length === 1) {
       network.setOptions({ physics: false });
     }
   });
 
-  // 拖动结束后应用自定义布局
   network.on("dragEnd", function (params) {
     if (params.nodes.length === 1) {
       applyCustomLayout();
     }
   });
 
-  // 当节点或边数据变化时，重新布局
   nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     applyCustomLayout();
   });
@@ -283,13 +293,11 @@
     applyCustomLayout();
   });
 
-  // 获取下一个节点ID
   function getNextNodeId() {
     const existingIds = nodes.getIds();
     return Math.max(...existingIds) + 1;
   }
 
-  // 应用自定义布局
   function applyCustomLayout() {
     const tree = buildTree();
     const roots = findRoots(tree);
@@ -307,7 +315,6 @@
     network.fit();
   }
 
-  // 构建树形结构
   function buildTree() {
     const tree = {};
     nodes.forEach(node => {
@@ -321,12 +328,10 @@
     return tree;
   }
 
-  // 查找根节点
   function findRoots(tree) {
     return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
   }
 
-  // 布局节点
   function layoutNode(node, depth, xOffset, yOffset, nodeSeparation, levelSeparation) {
     node.x = xOffset + depth * levelSeparation;
     let numChildren = node.children.length;
@@ -344,14 +349,12 @@
     return currentY;
   }
 
-  // 删除节点及其子节点
   function deleteNodeAndDescendants(nodeId) {
     const descendants = getDescendants(nodeId);
     nodes.remove([nodeId, ...descendants]);
     edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
   }
 
-  // 获取子孙节点
   function getDescendants(nodeId) {
     const descendants = [];
     const childEdges = edges.get().filter(edge => edge.from === nodeId);
@@ -362,10 +365,56 @@
     return descendants;
   }
 
-  // 初始布局
+  function addNodeWithAnimation(newNodeId, label, parentNodeId) {
+    const parentNode = nodes.get(parentNodeId);
+    const parentPos = network.getPositions([parentNodeId])[parentNodeId];
+
+    const initialX = parentPos.x + 50;
+    const initialY = parentPos.y;
+
+    nodes.add({
+      id: newNodeId,
+      label: label,
+      shape: 'box',
+      x: initialX,
+      y: initialY,
+      fixed: { x: false, y: false },
+      color: { background: 'rgba(255, 255, 255, 0)', border: 'rgba(0, 0, 0, 0)' },
+      font: { color: 'rgba(0, 0, 0, 0)' }
+    });
+    edges.add({ from: parentNodeId, to: newNodeId });
+
+    setTimeout(() => {
+      nodes.update({
+        id: newNodeId,
+        color: { background: '#ffffff', border: '#2B7CE9' },
+        font: { color: '#000000' },
+        className: 'new-node'
+      });
+    }, 50);
+
+    setTimeout(() => {
+      nodes.update({
+        id: newNodeId,
+        className: ''
+      });
+    }, 550);
+
+    setTimeout(applyCustomLayout, 100);
+  }
+
+  // 新增：获取前一个创建的节点ID
+  function getPreviousNodeId(currentNodeId) {
+    const allNodes = nodes.get();
+    const currentIndex = allNodes.findIndex(node => node.id === currentNodeId);
+    if (currentIndex > 0) {
+      return allNodes[currentIndex - 1].id;
+    }
+    return null;
+  }
+
   applyCustomLayout();
 
-  // 窗口大小改变时重新布局
   window.addEventListener('resize', applyCustomLayout);
 </script>
 </body>
