@@ -256,7 +256,7 @@
   <div class="operation-instructions">
     <div class="instruction-item">
       <span class="instruction-icon add-node-icon">+</span>
-      <span>回车: 添加同级节点</span>
+      <span>Enter: 添加同级节点</span>
     </div>
     <div class="instruction-item">
       <span class="instruction-icon add-child-icon">⇥</span>
@@ -264,11 +264,11 @@
     </div>
     <div class="instruction-item">
       <span class="instruction-icon edit-node-icon">✎</span>
-      <span>双击左键: 编辑节点</span>
+      <span>Double left-click: 编辑节点</span>
     </div>
     <div class="instruction-item">
       <span class="instruction-icon delete-node-icon">✖</span>
-      <span>Delete 或 Backspace: 删除节点或移除图片</span>
+      <span>Delete/Backspace: 删除节点</span>
     </div>
     <div class="instruction-item operation-button" id="undo-button" title="撤销">
       <span class="instruction-icon undo-icon">↶</span>
@@ -582,14 +582,13 @@
       // 处理输入变化
       const handleInputChange = () => {
         const newLabelText = input.value.trim();
-        if (newLabelText !== '') {
-          // 更新节点的文本数据
-          nodes.update({
-            id: nodeId,
-            label: newLabelText
-          });
-          lastModifiedNodeId = nodeId; // 更新最后修改节点ID
-        }
+        // 更新节点的文本数据
+        nodes.update({
+          id: nodeId,
+          label: newLabelText
+        });
+        lastModifiedNodeId = nodeId; // 更新最后修改节点ID
+
         if (document.body.contains(input)) {
           document.body.removeChild(input);
         }
