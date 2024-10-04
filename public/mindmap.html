@@ -7,6 +7,10 @@
   <title>趣味思维导图</title>
   <!-- 引入vis-network库 -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- 引入JSZip库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+  <!-- 引入FileSaver库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     /* 引入Comic Neue字体 */
     @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
@@ -245,6 +249,30 @@
       height: 100%;
       object-fit: contain; /* 保持等比例适应 */
     }
+
+    /* 导出Word按钮样式 */
+    #export-word-button {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 15px;
+      font-size: 14px;
+      color: #FFFFFF;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    #export-word-button:hover {
+      background-color: #45a049;
+    }
+
+    #export-word-button:active {
+      background-color: #39843c;
+    }
   </style>
 </head>
 
@@ -294,6 +322,9 @@
             d="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3h-6zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3v6zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6h6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6v-6z" />
   </svg>
 </button>
+
+<!-- 导出Word按钮 -->
+<button id="export-word-button" title="导出为Word文档">导出为Word</button>
 
 <!-- Resize Handle -->
 <div id="resize-handle" class="resize-handle"></div>
@@ -940,7 +971,7 @@
       returnType: "object",
       fields: ['id']
     });
-    const allNodeArray = Object.values(allNodes);
+    const allNodeArray = Object.values(allNodes).sort((a, b) => a.id - b.id);
     const currentIndex = allNodeArray.findIndex(node => node.id === currentNodeId);
     if (currentIndex > 0) {
       return allNodeArray[currentIndex - 1].id;
@@ -953,6 +984,268 @@
 
   // 窗口大小变化时重新应用布局
   window.addEventListener('resize', applyCustomLayout);
+
+  // ------------------- 导出为Word功能开始 -------------------
+
+  // 获取导出按钮
+  const exportWordButton = document.getElementById('export-word-button');
+
+  // 绑定点击事件
+  exportWordButton.addEventListener('click', exportToWord);
+
+  // 导出函数
+  function exportToWord() {
+    const zip = new JSZip();
+
+    // 创建 required Word结构文件
+    zip.file('[Content_Types].xml', generateContentTypes());
+    zip.folder('_rels').file('.rels', generateRels());
+    zip.folder('word').file('document.xml', generateDocumentXML());
+    zip.folder('word').file('_rels/document.xml.rels', generateDocumentRels());
+    zip.folder('word').file('styles.xml', generateStylesXML());
+
+    // 处理图片
+    const images = gatherImages();
+    const mediaFolder = zip.folder('word/media');
+    let imageIndex = 1;
+    const imageRelMap = {}; // nodeId -> relationship id
+    for (const [nodeId, dataUrl] of Object.entries(images)) {
+      const base64Data = dataUrl.split(',')[1];
+      const mimeType = dataUrl.split(';')[0].split('/')[1];
+      const extension = mimeType === 'jpeg' ? 'jpg' : mimeType; // 支持jpeg和png
+      const imageName = `image${imageIndex}.${extension}`;
+      mediaFolder.file(imageName, base64ToArrayBuffer(base64Data), { base64: true });
+      imageRelMap[nodeId] = `rId${imageIndex + 1}`; // rId1已用于styles.xml
+      imageIndex++;
+    }
+
+    // 生成 word/_rels/document.xml.rels 文件，添加图片关系
+    zip.folder('word/_rels').file('document.xml.rels', generateDocumentRelsContent(imageRelMap));
+
+    // 生成最终的Word文档
+    zip.generateAsync({ type: "blob" })
+            .then(function (content) {
+              saveAs(content, "思维导图.docx");
+            })
+            .catch(function (err) {
+              console.error("Error generating Word document:", err);
+              alert("导出过程中发生错误，请检查控制台以获取更多信息。");
+            });
+  }
+
+  // 辅助函数：生成 [Content_Types].xml
+  function generateContentTypes() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`;
+  }
+
+  // 辅助函数：生成 _rels/.rels
+  function generateRels() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+</Relationships>`;
+  }
+
+  // 辅助函数：生成 word/styles.xml
+  function generateStylesXML() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:basedOn w:val=""/>
+    <w:next w:val="Normal"/>
+    <w:rsidR w:val="00000000"/>
+    <w:pPr>
+      <w:spacing w:after="200"/>
+    </w:pPr>
+    <w:rPr>
+      <w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>
+      <w:color w:val="000000"/>
+      <w:sz w:val="24"/>
+    </w:rPr>
+  </w:style>
+</w:styles>`;
+  }
+
+  // 辅助函数：生成 word/document.xml
+  function generateDocumentXML() {
+    // 构建树结构
+    const tree = buildTree();
+    const roots = findRoots(tree);
+
+    // 递归生成段落
+    let bodyContent = '';
+    roots.forEach(root => {
+      bodyContent += generateParagraph(root, 0, tree);
+    });
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    ${bodyContent}
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
+              w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+  }
+
+  // 辅助函数：生成段落，包括图片
+  function generateParagraph(node, level, tree) {
+    let indent = level * 720; // 每级缩进720 (0.5 英寸)
+    let paragraph = `
+    <w:p>
+      <w:pPr>
+        <w:ind w:left="${indent}"/>
+      </w:pPr>
+      <w:r>
+        <w:t>${escapeXML(node.label)}</w:t>
+      </w:r>
+    </w:p>`;
+
+    // 检查是否有图片
+    if (node.shape === 'image' && node.image) {
+      const imageRelId = imageRelMap[node.id];
+      if (imageRelId) {
+        paragraph += `
+    <w:p>
+      <w:r>
+        <w:drawing>
+          <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+            <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                  <pic:nvPicPr>
+                    <pic:cNvPr id="0" name="Picture ${node.id}"/>
+                    <pic:cNvPicPr/>
+                  </pic:nvPicPr>
+                  <pic:blipFill>
+                    <a:blip r:embed="${imageRelId}"/>
+                    <a:stretch>
+                      <a:fillRect/>
+                    </a:stretch>
+                  </pic:blipFill>
+                  <pic:spPr>
+                    <a:xfrm>
+                      <a:off x="0" y="0"/>
+                      <a:ext cx="990000" cy="792000"/>
+                    </a:xfrm>
+                    <a:prstGeom prst="rect">
+                      <a:avLst/>
+                    </a:prstGeom>
+                  </pic:spPr>
+                </pic:pic>
+              </a:graphicData>
+            </a:graphic>
+          </wp:inline>
+        </w:drawing>
+      </w:r>
+    </w:p>`;
+      }
+    }
+
+    // 递归处理子节点
+    if (tree[node.id] && tree[node.id].children.length > 0) {
+      tree[node.id].children.forEach(child => {
+        paragraph += generateParagraph(child, level + 1, tree);
+      });
+    }
+
+    return paragraph;
+  }
+
+  // 辅助函数：转义XML特殊字符
+  function escapeXML(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&apos;'
+    };
+    return text.replace(/[&<>"']/g, function (m) { return map[m]; });
+  }
+
+  // 辅助函数：收集所有包含图片的节点
+  function gatherImages() {
+    const images = {};
+    nodes.forEach(node => {
+      if (node.shape === 'image' && node.image) {
+        images[node.id] = node.image; // node.image是DataURL
+      }
+    });
+    return images;
+  }
+
+  // 辅助函数：将Base64转换为ArrayBuffer
+  function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  // 辅助变量：图片关系映射
+  let imageRelMap = {}; // nodeId -> relationship id
+
+  // 辅助函数：生成 word/_rels/document.xml.rels
+  function generateDocumentRels() {
+    // 这里会在exportToWord函数中处理，因此此函数留空
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+  }
+
+  // 辅助函数：生成 word/_rels/document.xml.rels 内容
+  function generateDocumentRelsContent(imageRelMap) {
+    let rels = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+
+    let imageIndex = 2; // rId1已用于styles.xml
+    for (const [nodeId, relId] of Object.entries(imageRelMap)) {
+      rels += `
+  <Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imageIndex}.${getImageExtension(images[nodeId])}"/>`;
+      imageIndex++;
+    }
+
+    rels += `
+</Relationships>`;
+    return rels;
+  }
+
+  // 辅助函数：获取图片扩展名
+  function getImageExtension(dataUrl) {
+    const mime = dataUrl.split(';')[0].split('/')[1];
+    return mime === 'jpeg' ? 'jpg' : mime; // 支持jpeg和png
+  }
+
+  // 辅助函数：生成 word/_rels/document.xml.rels (Initialize it empty)
+  function generateDocumentRels() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+  }
+
+  // 注意：由于word/_rels/document.xml.rels需要包含所有图片关系，因此在exportToWord函数内已经处理完成，此处无需额外内容。
+
+  // ------------------- 导出为Word功能结束 -------------------
 </script>
 </body>
 
