@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>趣味思维导图</title>
-  <!-- 引入vis-network库，用于创建交互式网络图 -->
+  <!-- 引入vis-network库 -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
     /* 引入Comic Neue字体 */
@@ -19,7 +19,7 @@
       padding: 0;
       font-family: 'Comic Neue', cursive;
       background-color: #FFF5E6;
-      position: relative; /* 为悬浮容器提供定位上下文 */
+      position: relative;
     }
 
     /* 思维导图容器样式 */
@@ -45,15 +45,11 @@
       border-radius: 10px;
       box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
       border: 2px solid #FF9933;
-      overflow: auto; /* 当内容超出时显示滚动条 */
+      overflow: auto;
       max-width: 90%;
       max-height: 90%;
-      /* 移除最小宽度和高度限制 */
-      /* min-width: 200px; */
-      /* min-height: 150px; */
-      z-index: 1000; /* 确保悬浮在最上层 */
+      z-index: 1000;
       box-sizing: border-box;
-      /* 禁用用户手动缩放 */
       resize: none;
     }
 
@@ -82,7 +78,7 @@
       color: #FFFFFF;
       cursor: pointer;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-      display: none; /* 初始隐藏，只有操作说明容器隐藏时显示 */
+      display: none;
       z-index: 1000;
     }
 
@@ -163,7 +159,7 @@
       justify-content: center;
       align-items: center;
       transition: all 0.3s ease;
-      z-index: 1000; /* 确保按钮在最上层 */
+      z-index: 1000;
     }
 
     /* 概览按钮悬停和点击效果 */
@@ -218,6 +214,37 @@
       background-color: rgba(0, 0, 0, 0.1);
       border-radius: 4px;
     }
+
+    /* Resize Handle 样式 */
+    .resize-handle {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      background-color: #FF9933;
+      border: 2px solid #8B4513;
+      border-radius: 50%;
+      cursor: se-resize;
+      z-index: 1001;
+      display: none; /* 初始隐藏 */
+    }
+
+    /* 图片容器样式 */
+    .image-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      resize: both;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* 保持等比例适应 */
+    }
   </style>
 </head>
 
@@ -241,7 +268,7 @@
     </div>
     <div class="instruction-item">
       <span class="instruction-icon delete-node-icon">✖</span>
-      <span>Delete: 删除节点</span>
+      <span>Delete 或 Backspace: 删除节点或移除图片</span>
     </div>
     <div class="instruction-item operation-button" id="undo-button" title="撤销">
       <span class="instruction-icon undo-icon">↶</span>
@@ -256,6 +283,7 @@
 
 <!-- 展开操作说明按钮 -->
 <button id="show-operation-button" style="display: block;" title="显示操作说明">显示操作说明</button>
+
 <!-- 思维导图容器 -->
 <div id="mindmap"></div>
 
@@ -267,6 +295,9 @@
   </svg>
 </button>
 
+<!-- Resize Handle -->
+<div id="resize-handle" class="resize-handle"></div>
+
 <script>
   // 获取元素
   const operationContainer = document.getElementById('operation-container');
@@ -275,9 +306,16 @@
   const overviewButton = document.getElementById('overview-button');
   const undoButton = document.getElementById('undo-button');
   const redoButton = document.getElementById('redo-button');
+  const resizeHandle = document.getElementById('resize-handle');
 
   // 控制最后被编辑节点的ID
   let lastModifiedNodeId = null;
+
+  // 控制是否正在编辑节点
+  let isEditingNode = false;
+
+  // 控制是否正在执行撤销/重做
+  let isExecutingUndoRedo = false;
 
   // 关闭操作说明容器
   closeOperationButton.addEventListener('click', () => {
@@ -298,7 +336,8 @@
       label: '主题',
       shape: 'box',
       font: { multi: true },
-      fixed: { x: true, y: true }
+      fixed: { x: true, y: true },
+      size: 30 // 设置节点初始大小
     }
   ]);
 
@@ -357,14 +396,18 @@
   // 历史记录栈
   const undoStack = [];
   const redoStack = [];
-  let isExecutingUndoRedo = false;
+
+  // 函数：深拷贝对象
+  function deepCopy(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
 
   // 函数：记录当前状态到undoStack
   function saveStateToUndo(actionNodeId = null) {
     if (isExecutingUndoRedo) return;
     const currentState = {
-      nodes: nodes.get().map(node => ({ ...node })),
-      edges: edges.get().map(edge => ({ ...edge })),
+      nodes: deepCopy(nodes.get()), // 保存所有节点属性
+      edges: deepCopy(edges.get()),
       lastModifiedNodeId: actionNodeId
     };
     undoStack.push(currentState);
@@ -386,7 +429,6 @@
     lastModifiedNodeId = state.lastModifiedNodeId;
     applyCustomLayout();
     isExecutingUndoRedo = false;
-
     // 自动选中上一个被编辑的节点
     if (lastModifiedNodeId !== null) {
       network.selectNodes([lastModifiedNodeId]);
@@ -407,8 +449,8 @@
   undoButton.addEventListener('click', () => {
     if (undoStack.length === 0) return;
     const currentState = {
-      nodes: nodes.get().map(node => ({ ...node })),
-      edges: edges.get().map(edge => ({ ...edge })),
+      nodes: deepCopy(nodes.get()),
+      edges: deepCopy(edges.get()),
       lastModifiedNodeId: lastModifiedNodeId
     };
     redoStack.push(currentState);
@@ -420,8 +462,8 @@
   redoButton.addEventListener('click', () => {
     if (redoStack.length === 0) return;
     const currentState = {
-      nodes: nodes.get().map(node => ({ ...node })),
-      edges: edges.get().map(edge => ({ ...edge })),
+      nodes: deepCopy(nodes.get()),
+      edges: deepCopy(edges.get()),
       lastModifiedNodeId: lastModifiedNodeId
     };
     undoStack.push(currentState);
@@ -443,18 +485,17 @@
       redoButton.click();
       return;
     }
-
     const tag = event.target.tagName;
     if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
       return;
     }
-
     const selectedNodes = network.getSelectedNodes();
     if (selectedNodes.length === 1) {
       const selectedNode = selectedNodes[0];
+      const node = nodes.get(selectedNode);
+      if (!node) return; // 防止node为null
       // 检查是否是根节点（假设根节点ID为1）
-      const isRootNode = nodes.get(selectedNode).id === 1 || edges.get().filter(edge => edge.to === selectedNode).length === 0;
-
+      const isRootNode = node.id === 1 || edges.get().filter(edge => edge.to === node.id).length === 0;
       if (event.key === 'Enter') {
         // 添加同级节点
         event.preventDefault();
@@ -474,44 +515,54 @@
         network.selectNodes([newNodeId]);
         lastModifiedNodeId = newNodeId; // 更新最后修改节点ID
       } else if ((event.key === 'Backspace' || event.key === 'Delete')) {
-        // 不允许删除根节点
-        if (isRootNode) {
-          event.preventDefault();
-          alert("不允许删除根节点！");
-          return;
-        }
-
-        // 删除节点
         event.preventDefault();
-        saveStateToUndo(lastModifiedNodeId);
-        const previousNodeId = getPreviousNodeId(selectedNode);
-        deleteNodeAndDescendants(selectedNode);
-        setTimeout(() => {
-          applyCustomLayout();
-          if (previousNodeId) {
-            network.selectNodes([previousNodeId]);
-            lastModifiedNodeId = previousNodeId; // 更新最后修改节点ID
+        if (node.shape === 'image') {
+          // 仅移除图片，保留节点
+          saveStateToUndo(selectedNode);
+          nodes.update({
+            id: selectedNode,
+            shape: 'box',
+            image: undefined // 移除图片
+          });
+          lastModifiedNodeId = selectedNode; // 更新最后修改节点ID
+        } else {
+          // 不允许删除根节点
+          if (isRootNode) {
+            alert("不允许删除根节点！");
+            return;
           }
-        }, 100);
+          // 删除节点及其后代
+          saveStateToUndo(lastModifiedNodeId);
+          const previousNodeId = getPreviousNodeId(selectedNode);
+          deleteNodeAndDescendants(selectedNode);
+          setTimeout(() => {
+            applyCustomLayout();
+            if (previousNodeId) {
+              network.selectNodes([previousNodeId]);
+              lastModifiedNodeId = previousNodeId; // 更新最后修改节点ID
+            }
+          }, 100);
+        }
       }
     }
   });
 
-  let isEditingNode = false;
-
   // 双击节点编辑事件
   network.on('doubleClick', function (params) {
     if (params.nodes.length === 1) {
-      saveStateToUndo(lastModifiedNodeId);
-      isEditingNode = true;
       const nodeId = params.nodes[0];
       const node = nodes.get(nodeId);
+      if (!node) return; // 防止node为null
+      saveStateToUndo(lastModifiedNodeId);
+      isEditingNode = true;
       const position = network.getPositions([nodeId])[nodeId];
+      if (!position) return; // 防止position为null
       const domPos = network.canvasToDOM(position);
-
       // 创建编辑输入框
       const input = document.createElement('textarea');
-      input.value = node.label;
+      // 获取节点的文本内容
+      let labelText = node.label || '';
+      input.value = labelText;
       input.style.position = 'absolute';
       input.style.left = `${domPos.x - 140}px`;
       input.style.top = `${domPos.y - 35}px`;
@@ -528,14 +579,14 @@
       document.body.appendChild(input);
       input.focus();
       input.select();
-
       // 处理输入变化
       const handleInputChange = () => {
-        const newLabel = input.value.trim();
-        if (newLabel !== '') {
+        const newLabelText = input.value.trim();
+        if (newLabelText !== '') {
+          // 更新节点的文本数据
           nodes.update({
             id: nodeId,
-            label: newLabel
+            label: newLabelText
           });
           lastModifiedNodeId = nodeId; // 更新最后修改节点ID
         }
@@ -544,7 +595,6 @@
         }
         isEditingNode = false;
       };
-
       // 输入框键盘事件
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -553,9 +603,171 @@
         }
         event.stopPropagation();
       });
-
       // 输入框失焦事件
       input.addEventListener('blur', handleInputChange);
+    }
+  });
+
+  // 添加粘贴事件监听
+  document.addEventListener('paste', function (event) {
+    if (isEditingNode) return; // 编辑模式下不处理
+    const items = event.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        // 有图片
+        const blob = items[i].getAsFile();
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const dataUrl = event.target.result;
+          const selectedNodes = network.getSelectedNodes();
+          if (selectedNodes.length === 1) {
+            const nodeId = selectedNodes[0];
+            saveStateToUndo(nodeId);
+            // 更新节点形状和图像
+            nodes.update({
+              id: nodeId,
+              shape: 'image',
+              image: dataUrl,
+              label: nodes.get(nodeId).label || '',
+              size: 30 // 初始大小
+            });
+            lastModifiedNodeId = nodeId; // 更新最后修改节点ID
+          }
+        };
+        reader.readAsDataURL(blob);
+        event.preventDefault();
+        return;
+      }
+    }
+  });
+
+  // 显示Resize Handle
+  network.on('selectNode', function (params) {
+    if (params.nodes.length === 1) {
+      const nodeId = params.nodes[0];
+      const node = nodes.get(nodeId);
+      if (node && node.shape === 'image') {
+        showResizeHandle(nodeId, node);
+      } else {
+        hideResizeHandle();
+      }
+    } else {
+      hideResizeHandle();
+    }
+  });
+
+  // 隐藏Resize Handle
+  network.on('deselectNode', function (params) {
+    hideResizeHandle();
+  });
+
+  // 显示Resize Handle函数
+  function showResizeHandle(nodeId, node) {
+    if (!node) return; // 防止node为null
+    const positions = network.getPositions([nodeId]);
+    const position = positions[nodeId];
+    if (!position) return; // 防止position为null
+    const domCoords = network.canvasToDOM(position);
+    // 设置Resize Handle的位置，位于节点的右下角
+    resizeHandle.style.left = `${domCoords.x + getNodeWidth(node) - 7.5}px`;
+    resizeHandle.style.top = `${domCoords.y + getNodeHeight(node) - 7.5}px`;
+    resizeHandle.style.display = 'block';
+  }
+
+  // 隐藏Resize Handle函数
+  function hideResizeHandle() {
+    resizeHandle.style.display = 'none';
+    resizingNodeId = null;
+  }
+
+  // 获取节点的宽度
+  function getNodeWidth(node) {
+    // 根据节点形状和大小计算宽度
+    if (node.shape === 'image') {
+      return node.size * 2; // 修改为 size * 2 以符合vis-network的size定义
+    }
+    return node.size * 2; // 对于其他形状也使用 size * 2
+  }
+
+  // 获取节点的高度
+  function getNodeHeight(node) {
+    // 根据节点形状和大小计算高度
+    if (node.shape === 'image') {
+      return node.size * 2; // 修改为 size * 2 以符合vis-network的size定义
+    }
+    return node.size * 2; // 对于其他形状也使用 size * 2
+  }
+
+  // 初始 Resize 相关变量
+  let isResizing = false;
+  let initialMouseX, initialMouseY;
+  let initialSize;
+  let resizingNodeId;
+
+  // 实现Resize Handle拖拽功能
+  resizeHandle.addEventListener('mousedown', function (event) {
+    event.preventDefault();
+    isResizing = true;
+    initialMouseX = event.clientX;
+    initialMouseY = event.clientY;
+    const selectedNodes = network.getSelectedNodes();
+    if (selectedNodes.length === 1) {
+      resizingNodeId = selectedNodes[0];
+      const node = nodes.get(resizingNodeId);
+      if (node) {
+        initialSize = node.size;
+      }
+    }
+  });
+
+  document.addEventListener('mousemove', function (event) {
+    if (isResizing && resizingNodeId !== null) {
+      const deltaX = event.clientX - initialMouseX;
+      const deltaY = event.clientY - initialMouseY;
+      const delta = Math.max(deltaX, deltaY);
+      const newSize = Math.max(10, initialSize + delta / 2); // 提高灵敏度，从 /5 改为 /2
+      const node = nodes.get(resizingNodeId);
+      if (node) {
+        nodes.update({
+          id: resizingNodeId,
+          size: newSize
+        });
+        // 实时更新Resize Handle位置
+        const positions = network.getPositions([resizingNodeId]);
+        const position = positions[resizingNodeId];
+        if (position) {
+          const domCoords = network.canvasToDOM(position);
+          resizeHandle.style.left = `${domCoords.x + getNodeWidth(node) - 7.5}px`;
+          resizeHandle.style.top = `${domCoords.y + getNodeHeight(node) - 7.5}px`;
+        }
+      }
+    }
+  });
+
+  document.addEventListener('mouseup', function (event) {
+    if (isResizing && resizingNodeId !== null) {
+      isResizing = false;
+      saveStateToUndo(resizingNodeId);
+      applyCustomLayout();
+      resizingNodeId = null;
+    }
+  });
+
+  // 更新Resize Handle的位置在每次渲染后
+  network.on('afterDrawing', function () {
+    const selectedNodes = network.getSelectedNodes();
+    if (selectedNodes.length === 1) {
+      const nodeId = selectedNodes[0];
+      const node = nodes.get(nodeId);
+      if (node && node.shape === 'image') {
+        const positions = network.getPositions([nodeId]);
+        const position = positions[nodeId];
+        if (position) {
+          const domCoords = network.canvasToDOM(position);
+          resizeHandle.style.left = `${domCoords.x + getNodeWidth(node) - 7.5}px`;
+          resizeHandle.style.top = `${domCoords.y + getNodeHeight(node) - 7.5}px`;
+        }
+      }
     }
   });
 
@@ -564,6 +776,7 @@
     if (params.nodes.length === 1) {
       network.setOptions({ physics: false });
     }
+    hideResizeHandle();
   });
 
   // 节点拖动结束事件
@@ -588,14 +801,18 @@
     }
   });
 
-  // 获取下一个节点ID
+  // 函数：获取下一个节点ID
   function getNextNodeId() {
     const existingIds = nodes.getIds();
     return Math.max(...existingIds) + 1;
   }
 
-  // 应用自定义布局
+  // 函数：应用自定义布局
   function applyCustomLayout() {
+    if (isExecutingUndoRedo) {
+      // 避免在撤销/重做时重新应用布局
+      return;
+    }
     const tree = buildTree();
     const roots = findRoots(tree);
     const nodeSeparation = 150;
@@ -607,11 +824,13 @@
       currentY = layoutNode(root, 0, startX, currentY, nodeSeparation, levelSeparation);
     });
     nodes.forEach(node => {
-      nodes.update({
-        id: node.id,
-        x: tree[node.id].x,
-        y: tree[node.id].y
-      });
+      if (tree[node.id]) { // 确保tree中有该节点的数据
+        nodes.update({
+          id: node.id,
+          x: tree[node.id].x,
+          y: tree[node.id].y
+        });
+      }
     });
     network.fit({
       animation: {
@@ -621,7 +840,7 @@
     });
   }
 
-  // 构建树结构
+  // 函数：构建树结构
   function buildTree() {
     const tree = {};
     nodes.forEach(node => {
@@ -635,12 +854,12 @@
     return tree;
   }
 
-  // 查找根节点
+  // 函数：查找根节点
   function findRoots(tree) {
     return Object.values(tree).filter(node => !edges.get().some(edge => edge.to === node.id));
   }
 
-  // 布局节点
+  // 函数：布局节点
   function layoutNode(node, depth, xOffset, yOffset, nodeSeparation, levelSeparation) {
     node.x = xOffset + depth * levelSeparation;
     let numChildren = node.children.length;
@@ -658,14 +877,14 @@
     return currentY;
   }
 
-  // 删除节点及其后代
+  // 函数：删除节点及其后代
   function deleteNodeAndDescendants(nodeId) {
     const descendants = getDescendants(nodeId);
     nodes.remove([nodeId, ...descendants]);
     edges.remove(edges.get().filter(edge => edge.from === nodeId || edge.to === nodeId || descendants.includes(edge.from) || descendants.includes(edge.to)));
   }
 
-  // 获取节点的后代
+  // 函数：获取节点的后代
   function getDescendants(nodeId) {
     const descendants = [];
     const childEdges = edges.get().filter(edge => edge.from === nodeId);
@@ -676,29 +895,27 @@
     return descendants;
   }
 
-  // 添加带动画的新节点
+  // 函数：添加带动画的新节点
   function addNodeWithAnimation(newNodeId, label, parentNodeId) {
     const parentNode = nodes.get(parentNodeId);
-    const parentPos = network.getPositions([parentNodeId])[parentNodeId];
-
-    const initialX = parentPos.x + 50;
-    const initialY = parentPos.y;
-
+    const parentPos = parentNode ? network.getPositions([parentNodeId])[parentNodeId] : null;
+    const initialX = parentPos ? parentPos.x + 50 : 50;
+    const initialY = parentPos ? parentPos.y : container.clientHeight / 2;
     nodes.add({
       id: newNodeId,
       label: label,
-      shape: 'box',
+      shape: 'box', // 确保设置shape
       x: initialX,
       y: initialY,
       fixed: { x: false, y: false },
       color: { background: 'rgba(255, 255, 255, 0)', border: 'rgba(0, 0, 0, 0)' },
-      font: { color: 'rgba(0, 0, 0, 0)' }
+      font: { color: 'rgba(0, 0, 0, 0)' },
+      size: 30
     });
     edges.add({
       from: parentNodeId,
       to: newNodeId
     });
-
     setTimeout(() => {
       nodes.update({
         id: newNodeId,
@@ -707,20 +924,18 @@
         className: 'new-node'
       });
     }, 50);
-
     setTimeout(() => {
       nodes.update({
         id: newNodeId,
         className: ''
       });
     }, 650);
-
     setTimeout(() => {
       applyCustomLayout();
     }, 100);
   }
 
-  // 获取前一个节点ID
+  // 函数：获取前一个节点ID
   function getPreviousNodeId(currentNodeId) {
     const allNodes = nodes.get({
       returnType: "object",
