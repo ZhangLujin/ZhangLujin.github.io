@@ -35,7 +35,7 @@
       background-position: 0 0, 20px 20px;
     }
 
-    /* 悬浮操作说明容器样式 */
+    /* 操作说明悬浮容器样式 */
     #operation-container {
       position: absolute;
       top: 20px;
@@ -53,8 +53,30 @@
       resize: none;
     }
 
+    /* 注释面板悬浮容器样式 */
+    #annotation-container {
+      position: absolute;
+      top: 20px;
+      left: 20px; /* 与操作说明面板相同位置 */
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+      border: 2px solid #FF9933;
+      overflow: auto;
+      max-width: 90%;
+      max-height: 90%;
+      z-index: 1000;
+      box-sizing: border-box;
+      resize: none;
+      display: none; /* 初始隐藏 */
+      right: 20px;
+      left: auto;
+    }
+
     /* 关闭按钮样式 */
-    #close-operation {
+    #close-operation,
+    #close-annotation {
       position: absolute;
       top: 5px;
       right: 10px;
@@ -65,7 +87,7 @@
       color: #8B4513;
     }
 
-    /* 展开按钮样式 */
+    /* 展开操作说明按钮样式 */
     #show-operation-button {
       position: fixed;
       top: 20px;
@@ -134,6 +156,11 @@
       color: #000000;
     }
 
+    .annotation-icon {
+      background-color: #FFD700;
+      color: #8B4513;
+    }
+
     /* 操作按钮样式 */
     .operation-button {
       display: flex;
@@ -200,17 +227,20 @@
     }
 
     /* 滚动条样式优化 */
-    #operation-container::-webkit-scrollbar {
+    #operation-container::-webkit-scrollbar,
+    #annotation-container::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
 
-    #operation-container::-webkit-scrollbar-thumb {
+    #operation-container::-webkit-scrollbar-thumb,
+    #annotation-container::-webkit-scrollbar-thumb {
       background-color: #FF9933;
       border-radius: 4px;
     }
 
-    #operation-container::-webkit-scrollbar-track {
+    #operation-container::-webkit-scrollbar-track,
+    #annotation-container::-webkit-scrollbar-track {
       background-color: rgba(0, 0, 0, 0.1);
       border-radius: 4px;
     }
@@ -245,6 +275,13 @@
       height: 100%;
       object-fit: contain; /* 保持等比例适应 */
     }
+
+    /* 注释面板样式 */
+    #annotation-container h3 {
+      margin-top: 0;
+      font-size: 20px;
+      color: #8B4513;
+    }
   </style>
 </head>
 
@@ -278,7 +315,19 @@
       <span class="instruction-icon redo-icon">↷</span>
       <span style="margin-left: 10px;">Ctrl+Y: 重做</span>
     </div>
+    <div class="instruction-item operation-button" id="add-annotation-button" title="添加注释">
+      <span class="instruction-icon annotation-icon">🔖</span>
+      <span style="margin-left: 10px;">Ctrl+X: 添加/编辑注释</span>
+    </div>
   </div>
+</div>
+
+<!-- 注释面板悬浮容器 -->
+<div id="annotation-container">
+  <!-- 关闭按钮 -->
+  <button id="close-annotation" title="关闭注释">&times;</button>
+  <h3>节点注释</h3>
+  <div id="annotation-content" style="white-space: pre-wrap;"></div>
 </div>
 
 <!-- 展开操作说明按钮 -->
@@ -298,29 +347,39 @@
 <!-- Resize Handle -->
 <div id="resize-handle" class="resize-handle"></div>
 
+<!-- 主脚本 -->
 <script>
-  // 获取元素
-  const operationContainer = document.getElementById('operation-container');
-  const closeOperationButton = document.getElementById('close-operation');
-  const showOperationButton = document.getElementById('show-operation-button');
-  const overviewButton = document.getElementById('overview-button');
-  const undoButton = document.getElementById('undo-button');
-  const redoButton = document.getElementById('redo-button');
-  const resizeHandle = document.getElementById('resize-handle');
+  // 声明全局变量
+  var operationContainer = document.getElementById('operation-container');
+  var annotationContainer = document.getElementById('annotation-container');
+  var closeOperationButton = document.getElementById('close-operation');
+  var closeAnnotationButton = document.getElementById('close-annotation');
+  var showOperationButton = document.getElementById('show-operation-button');
+  var overviewButton = document.getElementById('overview-button');
+  var undoButton = document.getElementById('undo-button');
+  var redoButton = document.getElementById('redo-button');
+  var addAnnotationButton = document.getElementById('add-annotation-button');
+  var resizeHandle = document.getElementById('resize-handle');
+  var annotationContent = document.getElementById('annotation-content');
 
   // 控制最后被编辑节点的ID
-  let lastModifiedNodeId = null;
+  var lastModifiedNodeId = null;
 
   // 控制是否正在编辑节点
-  let isEditingNode = false;
+  var isEditingNode = false;
 
   // 控制是否正在执行撤销/重做
-  let isExecutingUndoRedo = false;
+  var isExecutingUndoRedo = false;
 
   // 关闭操作说明容器
   closeOperationButton.addEventListener('click', () => {
     operationContainer.style.display = 'none';
     showOperationButton.style.display = 'block';
+  });
+
+  // 关闭注释面板
+  closeAnnotationButton.addEventListener('click', () => {
+    annotationContainer.style.display = 'none';
   });
 
   // 展开操作说明容器
@@ -330,10 +389,11 @@
   });
 
   // 初始化节点数据
-  const nodes = new vis.DataSet([
+  var nodes = new vis.DataSet([
     {
       id: 1,
       label: '主题',
+      baseLabel: '主题',
       shape: 'box',
       font: { multi: true },
       fixed: { x: true, y: true },
@@ -342,14 +402,14 @@
   ]);
 
   // 初始化边数据
-  const edges = new vis.DataSet([]);
+  var edges = new vis.DataSet([]);
 
   // 获取思维导图容器
-  const container = document.getElementById('mindmap');
-  const data = { nodes, edges };
+  var container = document.getElementById('mindmap');
+  var data = { nodes: nodes, edges: edges };
 
   // 配置网络图选项
-  const options = {
+  var options = {
     layout: { hierarchical: false },
     nodes: {
       shape: 'box',
@@ -391,49 +451,7 @@
   };
 
   // 创建网络图实例
-  const network = new vis.Network(container, data, options);
-
-  // 历史记录栈
-  const undoStack = [];
-  const redoStack = [];
-
-  // 函数：深拷贝对象
-  function deepCopy(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
-  // 函数：记录当前状态到undoStack
-  function saveStateToUndo(actionNodeId = null) {
-    if (isExecutingUndoRedo) return;
-    const currentState = {
-      nodes: deepCopy(nodes.get()), // 保存所有节点属性
-      edges: deepCopy(edges.get()),
-      lastModifiedNodeId: actionNodeId
-    };
-    undoStack.push(currentState);
-    // 限制历史记录栈的大小（可选）
-    if (undoStack.length > 100) {
-      undoStack.shift();
-    }
-    // 清空redoStack
-    redoStack.length = 0;
-  }
-
-  // 函数：恢复到指定状态
-  function restoreState(state) {
-    isExecutingUndoRedo = true;
-    nodes.clear();
-    edges.clear();
-    nodes.add(state.nodes);
-    edges.add(state.edges);
-    lastModifiedNodeId = state.lastModifiedNodeId;
-    applyCustomLayout();
-    isExecutingUndoRedo = false;
-    // 自动选中上一个被编辑的节点
-    if (lastModifiedNodeId !== null) {
-      network.selectNodes([lastModifiedNodeId]);
-    }
-  }
+  var network = new vis.Network(container, data, options);
 
   // 概览按钮点击事件
   overviewButton.addEventListener('click', () => {
@@ -445,46 +463,8 @@
     });
   });
 
-  // 撤销按钮点击事件
-  undoButton.addEventListener('click', () => {
-    if (undoStack.length === 0) return;
-    const currentState = {
-      nodes: deepCopy(nodes.get()),
-      edges: deepCopy(edges.get()),
-      lastModifiedNodeId: lastModifiedNodeId
-    };
-    redoStack.push(currentState);
-    const previousState = undoStack.pop();
-    restoreState(previousState);
-  });
-
-  // 重做按钮点击事件
-  redoButton.addEventListener('click', () => {
-    if (redoStack.length === 0) return;
-    const currentState = {
-      nodes: deepCopy(nodes.get()),
-      edges: deepCopy(edges.get()),
-      lastModifiedNodeId: lastModifiedNodeId
-    };
-    undoStack.push(currentState);
-    const nextState = redoStack.pop();
-    restoreState(nextState);
-  });
-
   // 键盘快捷键事件处理
   document.addEventListener('keydown', function (event) {
-    // Ctrl+Z for Undo
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-      event.preventDefault();
-      undoButton.click();
-      return;
-    }
-    // Ctrl+Y for Redo
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
-      event.preventDefault();
-      redoButton.click();
-      return;
-    }
     const tag = event.target.tagName;
     if (isEditingNode || tag === 'INPUT' || tag === 'TEXTAREA') {
       return;
@@ -499,21 +479,21 @@
       if (event.key === 'Enter') {
         // 添加同级节点
         event.preventDefault();
-        saveStateToUndo(lastModifiedNodeId);
         const connectedEdges = network.getConnectedEdges(selectedNode);
         const parentEdge = edges.get(connectedEdges).find(edge => edge.to === selectedNode);
         const newNodeId = getNextNodeId();
         addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, parentEdge ? parentEdge.from : selectedNode);
         network.selectNodes([newNodeId]);
         lastModifiedNodeId = newNodeId; // 更新最后修改节点ID
+        saveStateToUndo(lastModifiedNodeId);
       } else if (event.key === 'Tab') {
         // 添加子节点
         event.preventDefault();
-        saveStateToUndo(lastModifiedNodeId);
         const newNodeId = getNextNodeId();
         addNodeWithAnimation(newNodeId, `新节点${newNodeId}`, selectedNode);
         network.selectNodes([newNodeId]);
         lastModifiedNodeId = newNodeId; // 更新最后修改节点ID
+        saveStateToUndo(lastModifiedNodeId);
       } else if ((event.key === 'Backspace' || event.key === 'Delete')) {
         event.preventDefault();
         if (node.shape === 'image') {
@@ -540,12 +520,88 @@
             if (previousNodeId) {
               network.selectNodes([previousNodeId]);
               lastModifiedNodeId = previousNodeId; // 更新最后修改节点ID
+            } else {
+              hideAnnotationPanel();
             }
           }, 100);
         }
       }
+    } else {
+      hideAnnotationPanel();
     }
   });
+
+  // 函数：添加或编辑注释
+  function addOrEditAnnotation() {
+    const selectedNodes = network.getSelectedNodes();
+    if (selectedNodes.length !== 1) {
+      alert("请选择一个节点来添加或编辑注释！");
+      return;
+    }
+    const nodeId = selectedNodes[0];
+    const node = nodes.get(nodeId);
+    if (!node) return;
+
+    // 创建注释输入框
+    isEditingNode = true;
+    const position = network.getPositions([nodeId])[nodeId];
+    if (!position) return; // 防止position为null
+    const domPos = network.canvasToDOM(position);
+    // 创建编辑输入框
+    const input = document.createElement('textarea');
+    input.placeholder = "请输入注释内容...";
+    input.style.position = 'absolute';
+    input.style.left = `${domPos.x - 140}px`;
+    input.style.top = `${domPos.y - 35}px`;
+    input.style.zIndex = 1001; /* 高于操作说明容器 */
+    input.style.width = '280px';
+    input.style.height = '70px';
+    input.style.fontSize = '16px';
+    input.style.fontFamily = 'Comic Neue, cursive';
+    input.style.border = '3px solid #FF9933';
+    input.style.borderRadius = '10px';
+    input.style.padding = '10px';
+    input.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.1)';
+    input.style.backgroundColor = '#FFFACD';
+    input.value = node.annotation || '';
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    // 处理输入变化
+    const handleInputChange = () => {
+      const newAnnotation = input.value.trim();
+      // 更新节点的注释数据
+      saveStateToUndo(nodeId);
+      nodes.update({
+        id: nodeId,
+        annotation: newAnnotation || undefined
+      });
+      lastModifiedNodeId = nodeId; // 更新最后修改节点ID
+      updateNodeLabel(nodes.get(nodeId));
+
+      // 如果注释内容为空，移除注释
+      if (!newAnnotation) {
+        hideAnnotationPanel();
+      } else {
+        showAnnotationPanel(nodes.get(nodeId));
+      }
+
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+      isEditingNode = false;
+    };
+    // 输入框键盘事件
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleInputChange();
+      }
+      event.stopPropagation();
+    });
+    // 输入框失焦事件
+    input.addEventListener('blur', handleInputChange);
+  }
 
   // 双击节点编辑事件
   network.on('doubleClick', function (params) {
@@ -560,9 +616,9 @@
       const domPos = network.canvasToDOM(position);
       // 创建编辑输入框
       const input = document.createElement('textarea');
-      // 获取节点的文本内容
-      let labelText = node.label || '';
-      input.value = labelText;
+      // 获取节点的基础文本内容
+      let baseLabel = node.baseLabel || '';
+      input.value = baseLabel;
       input.style.position = 'absolute';
       input.style.left = `${domPos.x - 140}px`;
       input.style.top = `${domPos.y - 35}px`;
@@ -585,7 +641,8 @@
         // 更新节点的文本数据
         nodes.update({
           id: nodeId,
-          label: newLabelText
+          baseLabel: newLabelText,
+          label: (node.annotation ? newLabelText + " 🔖" : newLabelText)
         });
         lastModifiedNodeId = nodeId; // 更新最后修改节点ID
 
@@ -627,9 +684,17 @@
               id: nodeId,
               shape: 'image',
               image: dataUrl,
-              label: nodes.get(nodeId).label || '',
+              label: nodes.get(nodeId).baseLabel || '',
               size: 30 // 初始大小
             });
+            // 如果节点有注释，保留注释标记
+            const currentNode = nodes.get(nodeId);
+            if (currentNode.annotation) {
+              nodes.update({
+                id: nodeId,
+                label: currentNode.baseLabel + " 🔖"
+              });
+            }
             lastModifiedNodeId = nodeId; // 更新最后修改节点ID
           }
         };
@@ -650,14 +715,22 @@
       } else {
         hideResizeHandle();
       }
+      // 显示注释面板如果节点有注释
+      if (node && node.annotation) {
+        showAnnotationPanel(node);
+      } else {
+        hideAnnotationPanel();
+      }
     } else {
       hideResizeHandle();
+      hideAnnotationPanel();
     }
   });
 
   // 隐藏Resize Handle
   network.on('deselectNode', function (params) {
     hideResizeHandle();
+    hideAnnotationPanel();
   });
 
   // 显示Resize Handle函数
@@ -698,10 +771,10 @@
   }
 
   // 初始 Resize 相关变量
-  let isResizing = false;
-  let initialMouseX, initialMouseY;
-  let initialSize;
-  let resizingNodeId;
+  var isResizing = false;
+  var initialMouseX, initialMouseY;
+  var initialSize;
+  var resizingNodeId;
 
   // 实现Resize Handle拖拽功能
   resizeHandle.addEventListener('mousedown', function (event) {
@@ -776,6 +849,7 @@
       network.setOptions({ physics: false });
     }
     hideResizeHandle();
+    hideAnnotationPanel();
   });
 
   // 节点拖动结束事件
@@ -789,6 +863,7 @@
   // 节点变化事件
   nodes.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     if (!isExecutingUndoRedo) {
+      // 在节点变化后立即应用布局
       applyCustomLayout();
     }
   });
@@ -796,6 +871,7 @@
   // 边变化事件
   edges.on(['add', 'remove', 'update'], function (event, properties, senderId) {
     if (!isExecutingUndoRedo) {
+      // 在边变化后立即应用布局
       applyCustomLayout();
     }
   });
@@ -827,7 +903,8 @@
         nodes.update({
           id: node.id,
           x: tree[node.id].x,
-          y: tree[node.id].y
+          y: tree[node.id].y,
+          fixed: { x: true, y: true } // 固定节点位置
         });
       }
     });
@@ -903,35 +980,29 @@
     nodes.add({
       id: newNodeId,
       label: label,
-      shape: 'box', // 确保设置shape
+      baseLabel: label,
+      shape: 'box',
       x: initialX,
       y: initialY,
       fixed: { x: false, y: false },
-      color: { background: 'rgba(255, 255, 255, 0)', border: 'rgba(0, 0, 0, 0)' },
-      font: { color: 'rgba(0, 0, 0, 0)' },
-      size: 30
+      color: { background: '#FFFACD', border: '#FF9933' },
+      font: { color: '#000000' },
+      size: 30,
+      className: 'new-node' // 添加动画类
     });
     edges.add({
       from: parentNodeId,
       to: newNodeId
     });
-    setTimeout(() => {
-      nodes.update({
-        id: newNodeId,
-        color: { background: '#FFFACD', border: '#FF9933' },
-        font: { color: '#000000' },
-        className: 'new-node'
-      });
-    }, 50);
+    // 应用布局
+    applyCustomLayout();
+    // 在动画结束后移除类
     setTimeout(() => {
       nodes.update({
         id: newNodeId,
         className: ''
       });
-    }, 650);
-    setTimeout(() => {
-      applyCustomLayout();
-    }, 100);
+    }, 650); // 与CSS动画持续时间匹配
   }
 
   // 函数：获取前一个节点ID
@@ -953,7 +1024,45 @@
 
   // 窗口大小变化时重新应用布局
   window.addEventListener('resize', applyCustomLayout);
+
+  // 显示注释面板
+  function showAnnotationPanel(node) {
+    annotationContent.textContent = node.annotation;
+    annotationContainer.style.display = 'block';
+  }
+
+  // 隐藏注释面板
+  function hideAnnotationPanel() {
+    annotationContainer.style.display = 'none';
+    annotationContent.textContent = '';
+  }
+
+  // 函数：更新节点标签以显示/移除注释标记
+  function updateNodeLabel(node) {
+    if (node.annotation) {
+      if (!node.label.endsWith(" 🔖")) {
+        nodes.update({
+          id: node.id,
+          label: node.baseLabel + " 🔖"
+        });
+      }
+    } else {
+      nodes.update({
+        id: node.id,
+        label: node.baseLabel
+      });
+    }
+  }
+
+  // 初始应用布局
+  applyCustomLayout();
+
+  // 窗口大小变化时重新应用布局
+  window.addEventListener('resize', applyCustomLayout);
 </script>
+
+<!-- 引入 UndoRedo 脚本 -->
+<script src="undoRedo.js"></script>
 </body>
 
 </html>
